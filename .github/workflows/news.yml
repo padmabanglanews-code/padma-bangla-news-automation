@@ -1,0 +1,14 @@
+name: Padma Bangla News Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test Automation
+        run: |
+          echo "PADMA BANGLA NEWS automation is working!"
+          date
