@@ -5,7 +5,7 @@ on:
 engine:
   id: gemini
   version: "0.43.0"
-  model: gemini-2.5-flash
+  model: gemini-flash
   env:
     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 permissions:
