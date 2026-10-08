@@ -1,5 +1,6 @@
 ---
 on:
+  workflow_dispatch:
   schedule:
     - cron: "30 2,4,6,8,10,12,14,16 * * *"
 engine:
