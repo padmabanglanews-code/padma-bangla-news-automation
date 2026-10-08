@@ -4,6 +4,7 @@ on:
     - cron: "30 2,4,6,8,10,12,14,16 * * *"
 engine:
   id: gemini
+  version: "0.43.0"
   env:
     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 permissions:
