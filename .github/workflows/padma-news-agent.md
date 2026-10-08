@@ -1,4 +1,5 @@
 ---
+max-turns: 8
 max-turn-cache-misses: 10
 on:
   workflow_dispatch:
