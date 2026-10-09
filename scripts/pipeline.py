@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode, quote, urlsplit
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
@@ -45,6 +45,43 @@ IST = ZoneInfo("Asia/Kolkata")
 
 class PipelineError(Exception):
     pass
+
+
+def _facebook_graph_error_message(error):
+    try:
+        graph_error = json.loads(error.read().decode("utf-8")).get("error", {})
+    except (AttributeError, UnicodeDecodeError, json.JSONDecodeError):
+        graph_error = {}
+
+    if not isinstance(graph_error, dict):
+        graph_error = {}
+    details = []
+    code = graph_error.get("code")
+    if isinstance(code, int) and not isinstance(code, bool):
+        details.append(f"code {code}")
+    error_type = graph_error.get("type")
+    if isinstance(error_type, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", error_type):
+        details.append(error_type)
+
+    message = graph_error.get("message", "")
+    if isinstance(message, str):
+        message = re.sub(r"https?://\S+", "[URL redacted]", message)
+        message = re.sub(
+            r"(?i)\b(?:access_token|authorization)\s*[:=]\s*[^\s,;]+",
+            "[credential redacted]",
+            message,
+        )
+        message = re.sub(r"(?i)\bbearer\s+\S+", "[credential redacted]", message)
+        for name, value in os.environ.items():
+            if value and re.search(r"TOKEN|SECRET|API_KEY", name, re.IGNORECASE):
+                message = message.replace(value, "[credential redacted]")
+        message = "".join(character for character in message if character.isprintable())[:300]
+        if message:
+            details.append(message)
+
+    if details:
+        return "Facebook Graph API error (" + ", ".join(details) + ")"
+    return f"Facebook request failed with HTTP {error.code}"
 
 
 class ArticleHTMLSanitizer(HTMLParser):
@@ -94,6 +131,8 @@ def _request_json(url, *, method="GET", payload=None, headers=None, retries=3, r
             if retry_safe and retryable and attempt + 1 < retries:
                 time.sleep(min(2 ** attempt, 4))
                 continue
+            if urlsplit(url).hostname == "graph.facebook.com":
+                raise PipelineError(_facebook_graph_error_message(error)) from None
             raise PipelineError(f"Request failed with HTTP {error.code}") from None
         except (URLError, TimeoutError, OSError, json.JSONDecodeError) as error:
             if retry_safe and attempt + 1 < retries:
