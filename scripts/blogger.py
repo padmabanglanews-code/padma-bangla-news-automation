@@ -47,6 +47,7 @@ def _find_existing_post(service, blog_id, source_id):
     while True:
         response = service.posts().list(
             blogId=blog_id,
+            status=["DRAFT", "LIVE"],
             maxResults=100,
             fetchBodies=True,
             pageToken=page_token,
@@ -98,17 +99,6 @@ def publish_post(title, content, *, labels=None, keywords=None, description="", 
     service = get_service()
     blog_id = os.environ["BLOGGER_BLOG_ID"]
     marker = f"<!-- padma-news-source:{source_id} -->" if source_id else ""
-    if marker:
-        existing = _find_existing_post(service, blog_id, source_id)
-        if existing:
-            return {
-                "id": existing.get("id"),
-                "url": existing.get("url"),
-                "title": existing.get("title"),
-                "published": existing.get("published"),
-                "existing": True,
-            }
-
     body = {"title": title, "content": f"{marker}\n{content}"}
     if labels:
         body["labels"] = labels
@@ -119,6 +109,29 @@ def publish_post(title, content, *, labels=None, keywords=None, description="", 
             "permalink": permalink,
             "source_id": source_id,
         }, ensure_ascii=False)
+
+    if marker:
+        existing = _find_existing_post(service, blog_id, source_id)
+        if existing:
+            status = existing.get("status", "").upper()
+            if status not in {"DRAFT", "LIVE"}:
+                raise RuntimeError("Blogger returned an existing post with unknown status")
+            if not is_draft and status == "DRAFT":
+                post = service.posts().publish(
+                    blogId=blog_id,
+                    postId=existing["id"],
+                ).execute()
+            else:
+                post = existing
+            return {
+                "id": post.get("id"),
+                "url": post.get("url"),
+                "title": post.get("title"),
+                "published": post.get("published"),
+                "status": post.get("status", status),
+                "existing": True,
+            }
+
     post = service.posts().insert(
         blogId=blog_id,
         body=body,
@@ -129,6 +142,7 @@ def publish_post(title, content, *, labels=None, keywords=None, description="", 
         "url": post.get("url"),
         "title": post.get("title"),
         "published": post.get("published"),
+        "status": post.get("status", ""),
         "existing": False,
     }
 

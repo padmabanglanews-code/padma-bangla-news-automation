@@ -354,13 +354,15 @@ def _prepare_queue(queue, stories):
 
 def _ready_items(queue):
     return sorted(
-        (item for item in queue if item.get("status") in {"pending", "ready", "facebook_pending"}),
+        (item for item in queue if item.get("status") in {"pending", "ready", "drafted", "facebook_pending"}),
         key=lambda item: item.get("priority_score", 0),
         reverse=True,
     )
 
 
 def _record_published(queue, item, blogger_result):
+    if blogger_result.get("status") != "LIVE":
+        raise PipelineError("Blogger did not confirm that the post is live")
     item["blogger_url"] = blogger_result.get("url", "")
     item["blogger_post_id"] = blogger_result.get("id", "")
     item["blogger_published_at"] = blogger_result.get("published") or datetime.now(timezone.utc).isoformat()
@@ -424,7 +426,61 @@ def run_pipeline():
             save_queue(queue)
 
         if not approved:
-            print(f"Prepared verified article for review: {item['source_id']} (live publishing disabled)")
+            if item.get("blogger_draft_id"):
+                print(f"Blogger draft is ready for review: {item['source_id']} (live publishing disabled)")
+                processed += 1
+                break
+
+            required = (
+                "BLOGGER_BLOG_ID", "BLOGGER_CLIENT_ID", "BLOGGER_CLIENT_SECRET", "BLOGGER_REFRESH_TOKEN"
+            )
+            missing = [name for name in required if not os.getenv(name)]
+            if missing:
+                _update_status(item, "ready", error="Missing Blogger credentials: " + ", ".join(missing))
+                save_queue(queue)
+                print("Verified article prepared; Blogger draft skipped, missing GitHub secrets: " + ", ".join(missing))
+                processed += 1
+                break
+
+            item["blogger_attempts"] = item.get("blogger_attempts", 0) + 1
+            article = item["article"]
+            try:
+                image_url = item.get("cloudinary_image_url")
+                if not image_url:
+                    image_url = upload_news_image(
+                        item.get("image_url", ""), item["source_id"], article["headline"]
+                    )
+                    item["cloudinary_image_url"] = image_url
+                    save_queue(queue)
+                result = publish_post(
+                    article["headline"],
+                    _article_content_with_image(article, image_url),
+                    labels=article.get("labels", [])[:10],
+                    keywords=(
+                        [article.get("primary_keyword", "")]
+                        + article.get("secondary_keywords", [])
+                    )[:10],
+                    description=article.get("seo_description", ""),
+                    permalink=article.get("permalink", ""),
+                    source_id=item["source_id"],
+                    is_draft=True,
+                )
+                if result.get("status") != "DRAFT":
+                    raise PipelineError("Blogger did not confirm that the post is a draft")
+                item["blogger_draft_id"] = result.get("id", "")
+                item["blogger_draft_created_at"] = datetime.now(timezone.utc).isoformat()
+                _update_status(item, "drafted")
+                save_queue(queue)
+                print(f"Verified article saved as a Blogger draft: {item['source_id']} (live publishing disabled)")
+            except ImageIntegrationError as error:
+                _update_status(item, "ready", error=str(error))
+                save_queue(queue)
+                print(f"Blogger draft blocked by Cloudinary integration: {error}")
+            except Exception as error:
+                status = "blogger_failed" if item["blogger_attempts"] >= MAX_STAGE_ATTEMPTS else "ready"
+                _update_status(item, status, error=f"Blogger draft creation failed ({type(error).__name__})")
+                save_queue(queue)
+                print(f"Blogger draft creation failed for {item['source_id']} ({type(error).__name__})")
             processed += 1
             break
 
@@ -467,6 +523,8 @@ def run_pipeline():
                     source_id=item["source_id"],
                     is_draft=False,
                 )
+                if result.get("status") != "LIVE":
+                    raise PipelineError("Blogger did not confirm that the post is live")
                 _record_published(queue, item, result)
             except ImageIntegrationError as error:
                 _update_status(item, "ready", error=str(error))

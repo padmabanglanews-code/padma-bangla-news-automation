@@ -229,6 +229,50 @@ class PipelineTests(unittest.TestCase):
         service.posts.return_value.insert.assert_called_once()
         self.assertTrue(service.posts.return_value.insert.call_args.kwargs["isDraft"])
 
+    def test_blogger_publish_promotes_existing_draft_without_duplicate(self):
+        service = unittest.mock.Mock()
+        service.posts.return_value.list.return_value.execute.return_value = {
+            "items": [
+                {
+                    "id": "draft-1",
+                    "status": "DRAFT",
+                    "customMetaData": '{"source_id":"source-1"}',
+                    "url": "https://example.blogspot.com/draft",
+                }
+            ]
+        }
+        service.posts.return_value.publish.return_value.execute.return_value = {
+            "id": "draft-1",
+            "status": "LIVE",
+            "url": "https://example.blogspot.com/live",
+        }
+
+        with (
+            patch.dict("os.environ", {"BLOGGER_BLOG_ID": "blog-id"}, clear=True),
+            patch.object(blogger, "get_service", return_value=service),
+        ):
+            result = blogger.publish_post(
+                "শিরোনাম",
+                "<p>খবর</p>",
+                source_id="source-1",
+                is_draft=False,
+            )
+
+        self.assertEqual(result["status"], "LIVE")
+        self.assertEqual(result["url"], "https://example.blogspot.com/live")
+        service.posts.return_value.list.assert_called_once_with(
+            blogId="blog-id",
+            status=["DRAFT", "LIVE"],
+            maxResults=100,
+            fetchBodies=True,
+            pageToken=None,
+        )
+        service.posts.return_value.publish.assert_called_once_with(
+            blogId="blog-id",
+            postId="draft-1",
+        )
+        service.posts.return_value.insert.assert_not_called()
+
     def test_region_priority_and_major_emergency(self):
         west_bengal = {"category": "abp_kolkata", "title": "Local civic update"}
         national_emergency = {"category": "abp_india", "title": "Major earthquake emergency"}
@@ -287,7 +331,12 @@ class PipelineTests(unittest.TestCase):
 
         def publish_blog(*args, **kwargs):
             order.append("blogger")
-            return {"id": "post-1", "url": "https://example.blogspot.com/post.html", "title": args[0]}
+            return {
+                "id": "post-1",
+                "url": "https://example.blogspot.com/post.html",
+                "title": args[0],
+                "status": "LIVE",
+            }
 
         def publish_page(page_id, caption, article_url):
             order.append("facebook")
@@ -311,6 +360,100 @@ class PipelineTests(unittest.TestCase):
             patch.object(pipeline, "save_queue"),
             patch.object(pipeline, "count_published_today", return_value=0),
             patch.object(pipeline, "upload_news_image", return_value="https://res.cloudinary.com/test/image/upload/a.jpg"),
+            patch.object(pipeline, "publish_post", side_effect=publish_blog),
+            patch.object(pipeline, "publish_facebook", side_effect=publish_page),
+        ):
+            pipeline.run_pipeline()
+
+        self.assertEqual(order, ["blogger", "facebook"])
+        self.assertEqual(item["status"], "published")
+
+    def test_unapproved_pipeline_creates_blogger_draft_only(self):
+        item = {
+            "source_id": "source-draft",
+            "status": "ready",
+            "priority_score": 300,
+            "article": {
+                "headline": "বাংলা সংবাদ শিরোনাম",
+                "article_html": "<p>তথ্যভিত্তিক সংবাদ প্রতিবেদন</p>",
+                "labels": ["কলকাতা"],
+            },
+        }
+        environment = {
+            "NEWS_PUBLISHING_ENABLED": "false",
+            "BLOGGER_BLOG_ID": "blog",
+            "BLOGGER_CLIENT_ID": "client",
+            "BLOGGER_CLIENT_SECRET": "secret",
+            "BLOGGER_REFRESH_TOKEN": "refresh",
+        }
+        with (
+            patch.dict("os.environ", environment, clear=True),
+            patch.object(pipeline, "load_queue", return_value=[item]),
+            patch.object(pipeline, "_collect_stories", return_value=[]),
+            patch.object(pipeline, "save_queue"),
+            patch.object(pipeline, "upload_news_image", return_value="https://res.cloudinary.com/test/image/upload/a.jpg"),
+            patch.object(
+                pipeline,
+                "publish_post",
+                return_value={"id": "draft-1", "status": "DRAFT"},
+            ) as create_blog,
+            patch.object(pipeline, "publish_facebook") as publish_page,
+        ):
+            pipeline.run_pipeline()
+
+        self.assertEqual(item["status"], "drafted")
+        self.assertEqual(item["blogger_draft_id"], "draft-1")
+        create_blog.assert_called_once()
+        self.assertTrue(create_blog.call_args.kwargs["is_draft"])
+        publish_page.assert_not_called()
+
+    def test_approved_pipeline_promotes_draft_before_facebook(self):
+        item = {
+            "source_id": "source-draft",
+            "status": "drafted",
+            "priority_score": 300,
+            "cloudinary_image_url": "https://res.cloudinary.com/test/image/upload/a.jpg",
+            "blogger_draft_id": "draft-1",
+            "article": {
+                "headline": "বাংলা সংবাদ শিরোনাম",
+                "article_html": "<p>তথ্যভিত্তিক সংবাদ প্রতিবেদন</p>",
+                "labels": ["কলকাতা"],
+                "facebook_caption": "বাংলা সংবাদ। Padma Bangla News-কে ফলো করুন",
+            },
+        }
+        order = []
+
+        def publish_blog(*args, **kwargs):
+            order.append("blogger")
+            self.assertFalse(kwargs["is_draft"])
+            return {
+                "id": "post-1",
+                "url": "https://example.blogspot.com/post.html",
+                "status": "LIVE",
+            }
+
+        def publish_page(page_id, caption, article_url):
+            order.append("facebook")
+            self.assertEqual(article_url, "https://example.blogspot.com/post.html")
+            return "facebook-1", False
+
+        environment = {
+            "NEWS_PUBLISHING_ENABLED": "true",
+            "GITHUB_EVENT_NAME": "workflow_dispatch",
+            "PUBLISH_REQUESTED": "true",
+            "BLOGGER_BLOG_ID": "blog",
+            "BLOGGER_CLIENT_ID": "client",
+            "BLOGGER_CLIENT_SECRET": "secret",
+            "BLOGGER_REFRESH_TOKEN": "refresh",
+            "FACEBOOK_PAGE_ID": "page",
+            "FACEBOOK_PAGE_ACCESS_TOKEN": "token",
+        }
+        with (
+            patch.dict("os.environ", environment, clear=True),
+            patch.object(pipeline, "load_queue", return_value=[item]),
+            patch.object(pipeline, "_collect_stories", return_value=[]),
+            patch.object(pipeline, "save_queue"),
+            patch.object(pipeline, "count_published_today", return_value=0),
             patch.object(pipeline, "publish_post", side_effect=publish_blog),
             patch.object(pipeline, "publish_facebook", side_effect=publish_page),
         ):
@@ -375,7 +518,11 @@ class PipelineTests(unittest.TestCase):
             patch.object(
                 pipeline,
                 "publish_post",
-                return_value={"id": "post-3", "url": "https://example.blogspot.com/post.html"},
+                return_value={
+                    "id": "post-3",
+                    "url": "https://example.blogspot.com/post.html",
+                    "status": "LIVE",
+                },
             ),
             patch.object(pipeline, "publish_facebook") as publish_page,
         ):
