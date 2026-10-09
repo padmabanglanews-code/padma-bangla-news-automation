@@ -3,3 +3,4 @@ secrets/
 .env.*
 !.env.example
 *token*.json
+__pycache__/
