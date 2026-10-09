@@ -296,6 +296,24 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(is_duplicate({"link": "https://news.example/story", "title": "অন্য লেখা"}, existing))
         self.assertTrue(is_duplicate({"link": "https://other.example/story", "title": "কলকাতার নতুন সংবাদ শিরোনাম"}, existing))
 
+    def test_queue_preparation_deduplicates_a_batch_of_stories(self):
+        stories = [
+            {
+                "category": "abp_kolkata",
+                "title": "কলকাতার প্রথম গুরুত্বপূর্ণ খবর",
+                "link": "https://news.example/story?utm_source=rss",
+            },
+            {
+                "category": "abp_kolkata",
+                "title": "কলকাতার প্রথম গুরুত্বপূর্ণ খবর",
+                "link": "https://news.example/story",
+            },
+        ]
+
+        queue = pipeline._prepare_queue([], stories)
+
+        self.assertEqual(len(queue), 1)
+
     def test_html_sanitizer_removes_scripts_and_attributes(self):
         result = pipeline.sanitize_article('<p onclick="bad()">সংবাদ</p><script>secret()</script><a href="https://bad">লিংক</a>')
 

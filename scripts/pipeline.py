@@ -335,7 +335,7 @@ def _prepare_queue(queue, stories):
     for rank, story in candidates:
         if rank is None:
             continue
-        if any(is_duplicate(story, item) for item in queue):
+        if is_duplicate(story, queue):
             continue
         item = dict(story)
         item["description"] = _clean_feed_text(item.get("description", ""))[:4000]
