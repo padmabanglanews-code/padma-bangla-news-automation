@@ -1,7 +1,6 @@
 import os
 import json
 import argparse
-import re
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 from google.oauth2.credentials import Credentials
@@ -18,7 +17,29 @@ def get_service():
         client_secret=os.environ["BLOGGER_CLIENT_SECRET"],
         scopes=SCOPES,
     )
-    return build("blogger", "v3", credentials=credentials)
+    return build("blogger", "v3", credentials=credentials, cache_discovery=False)
+
+def test_connection():
+    service = get_service()
+    blog_id = os.environ["BLOGGER_BLOG_ID"]
+    blog = service.blogs().get(blogId=blog_id).execute(num_retries=2)
+    created_at = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    post = service.posts().insert(
+        blogId=blog_id,
+        body={
+            "title": f"PADMA BANGLA NEWS OAuth Test {created_at}",
+            "content": "<p>Blogger OAuth draft connection test. This post is not published.</p>",
+        },
+        isDraft=True,
+    ).execute(num_retries=2)
+    if post.get("status", "DRAFT").upper() != "DRAFT":
+        raise RuntimeError("Blogger test post was not returned as a draft")
+    return {
+        "status": "success",
+        "blog_title": blog.get("name", ""),
+        "draft_status": post.get("status", "DRAFT"),
+        "draft_post_id": post.get("id", ""),
+    }
 
 def _find_existing_post(service, blog_id, source_id):
     marker = f"<!-- padma-news-source:{source_id} -->"
@@ -113,13 +134,22 @@ def publish_post(title, content, *, labels=None, keywords=None, description="", 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("title")
+    parser.add_argument("title", nargs="?")
+    parser.add_argument("--test-draft", action="store_true", help="Verify OAuth and create a Blogger draft only")
     parser.add_argument("--publish", action="store_true", help="Publish live; otherwise save as a draft")
     args = parser.parse_args()
     import sys
-    content = sys.stdin.read()
-    print(json.dumps(
-        publish_post(args.title, content, is_draft=not args.publish),
-        ensure_ascii=False,
-        indent=2,
-    ))
+    try:
+        if args.test_draft:
+            result = test_connection()
+        else:
+            if not args.title:
+                parser.error("title is required unless --test-draft is set")
+            content = sys.stdin.read()
+            result = publish_post(args.title, content, is_draft=not args.publish)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    except Exception as error:
+        status = getattr(getattr(error, "resp", None), "status", None)
+        detail = f"HTTP {status}" if status else type(error).__name__
+        print(f"Blogger operation failed ({detail}); credential values were not logged.", file=sys.stderr)
+        sys.exit(1)

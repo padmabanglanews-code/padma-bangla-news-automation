@@ -13,9 +13,10 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from dedupe import canonical_link, is_duplicate
-from queue import load_queue, published_today, save_queue
+from news_queue import load_queue, published_today, save_queue
 from rss_collector import FEEDS, fetch_feed
 from blogger import count_published_today, publish_post
+from images import ImageIntegrationError, upload_news_image
 
 
 MAX_DAILY_PUBLICATIONS = 8
@@ -247,6 +248,20 @@ def facebook_credentials_missing():
     return [name for name in ("FACEBOOK_PAGE_ID", "FACEBOOK_PAGE_ACCESS_TOKEN") if not os.getenv(name)]
 
 
+def verify_facebook_page():
+    missing = facebook_credentials_missing()
+    if missing:
+        raise PipelineError("Missing GitHub settings: " + ", ".join(missing))
+    page_id = os.environ["FACEBOOK_PAGE_ID"]
+    result = _request_json(
+        f"https://graph.facebook.com/v23.0/{quote(page_id, safe='')}?{urlencode({'fields': 'id,name'})}",
+        headers={"Authorization": f"Bearer {os.environ['FACEBOOK_PAGE_ACCESS_TOKEN']}"},
+    )
+    if str(result.get("id", "")) != page_id:
+        raise PipelineError("Facebook returned a different Page identity")
+    return {"status": "success", "page_id": page_id, "page_name": result.get("name", "")}
+
+
 def _facebook_api(path, *, method="GET", payload=None, retry_safe=True):
     token = os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN", "")
     headers = {"Authorization": f"Bearer {token}"}
@@ -356,6 +371,16 @@ def _record_published(queue, item, blogger_result):
         queue.append(item)
 
 
+def _article_content_with_image(article, image_url):
+    if not image_url.startswith("https://res.cloudinary.com/"):
+        raise ImageIntegrationError("Article image is not hosted securely on Cloudinary")
+    image = (
+        f'<figure><img src="{html.escape(image_url, quote=True)}" '
+        f'alt="{html.escape(article.get("headline", ""), quote=True)}" /></figure>'
+    )
+    return f"{image}\n{article.get('article_html', '')}"
+
+
 def run_pipeline():
     queue = load_queue()
     queue = _prepare_queue(queue, _collect_stories())
@@ -422,9 +447,16 @@ def run_pipeline():
             item["blogger_attempts"] = item.get("blogger_attempts", 0) + 1
             article = item["article"]
             try:
+                image_url = item.get("cloudinary_image_url")
+                if not image_url:
+                    image_url = upload_news_image(
+                        item.get("image_url", ""), item["source_id"], article["headline"]
+                    )
+                    item["cloudinary_image_url"] = image_url
+                    save_queue(queue)
                 result = publish_post(
                     article["headline"],
-                    article["article_html"],
+                    _article_content_with_image(article, image_url),
                     labels=article.get("labels", [])[:10],
                     keywords=(
                         [article.get("primary_keyword", "")]
@@ -436,6 +468,12 @@ def run_pipeline():
                     is_draft=False,
                 )
                 _record_published(queue, item, result)
+            except ImageIntegrationError as error:
+                _update_status(item, "ready", error=str(error))
+                save_queue(queue)
+                print(f"Blogger publication blocked by Cloudinary integration: {error}")
+                processed += 1
+                break
             except Exception as error:
                 status = "blogger_failed" if item["blogger_attempts"] >= MAX_STAGE_ATTEMPTS else "ready"
                 _update_status(item, status, error=f"Blogger publication failed ({type(error).__name__})")

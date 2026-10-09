@@ -3,6 +3,9 @@ import time
 from urllib.error import HTTPError, URLError
 import urllib.request
 import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
+
+from images import is_approved_news_image_url
 
 FEEDS = {
     "abp_home": "https://bengali.abplive.com/home/feed",
@@ -15,6 +18,34 @@ FEEDS = {
     "abp_technology": "https://bengali.abplive.com/technology/feed",
     "abp_education": "https://bengali.abplive.com/education/feed",
 }
+
+
+class _ImageSourceParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.url = ""
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "img" or self.url:
+            return
+        attributes = dict(attrs)
+        self.url = attributes.get("src") or attributes.get("data-src") or ""
+
+
+def _image_url(item, description):
+    parser = _ImageSourceParser()
+    try:
+        parser.feed(description or "")
+    except Exception:
+        pass
+    candidates = [parser.url]
+    for element in item.iter():
+        local_name = element.tag.rsplit("}", 1)[-1].lower()
+        if local_name in {"content", "thumbnail"}:
+            candidates.append(element.attrib.get("url", ""))
+        elif local_name == "enclosure" and element.attrib.get("type", "").startswith("image/"):
+            candidates.append(element.attrib.get("url", ""))
+    return next((candidate for candidate in candidates if is_approved_news_image_url(candidate)), "")
 
 def fetch_feed(category, url):
     request = urllib.request.Request(
@@ -43,6 +74,7 @@ def fetch_feed(category, url):
         link = item.findtext("link", "").strip()
         pub_date = item.findtext("pubDate", "").strip()
         description = item.findtext("description", "").strip()
+        image_url = _image_url(item, description)
 
         if title and link:
             items.append({
@@ -51,6 +83,7 @@ def fetch_feed(category, url):
                 "link": link,
                 "published": pub_date,
                 "description": description,
+                "image_url": image_url,
                 "source": "ABP Ananda"
             })
 
