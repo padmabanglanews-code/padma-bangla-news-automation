@@ -1,4 +1,6 @@
 import json
+import time
+from urllib.error import HTTPError, URLError
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -20,8 +22,19 @@ def fetch_feed(category, url):
         headers={"User-Agent": "PadmaBanglaNews/1.0"}
     )
 
-    with urllib.request.urlopen(request, timeout=20) as response:
-        root = ET.fromstring(response.read())
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                root = ET.fromstring(response.read())
+            break
+        except HTTPError as error:
+            if (error.code != 429 and not 500 <= error.code < 600) or attempt == 2:
+                raise
+            time.sleep(min(2 ** attempt, 4))
+        except (URLError, TimeoutError):
+            if attempt == 2:
+                raise
+            time.sleep(min(2 ** attempt, 4))
 
     items = []
 
@@ -29,6 +42,7 @@ def fetch_feed(category, url):
         title = item.findtext("title", "").strip()
         link = item.findtext("link", "").strip()
         pub_date = item.findtext("pubDate", "").strip()
+        description = item.findtext("description", "").strip()
 
         if title and link:
             items.append({
@@ -36,6 +50,7 @@ def fetch_feed(category, url):
                 "title": title,
                 "link": link,
                 "published": pub_date,
+                "description": description,
                 "source": "ABP Ananda"
             })
 
@@ -48,7 +63,7 @@ def main():
         try:
             stories.extend(fetch_feed(category, url))
         except Exception as error:
-            print(f"RSS error [{category}]: {error}")
+            print(f"RSS feed unavailable [{category}] ({type(error).__name__})")
 
     print(json.dumps(stories, ensure_ascii=False, indent=2))
 

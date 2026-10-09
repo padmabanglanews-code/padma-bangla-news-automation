@@ -1,14 +1,108 @@
-name: Padma Bangla News Test
+name: Padma Bangla News Pipeline
 
 on:
+  schedule:
+    - cron: "0 */2 * * *"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the prepared article live (requires explicit approval)"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: padma-news-pipeline
+  cancel-in-progress: false
 
 jobs:
-  test:
+  process:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - name: Test Automation
-        run: |
-          echo "PADMA BANGLA NEWS automation is working!"
-          date
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Test publication safeguards
+        run: python -m unittest discover -s tests -v
+
+      - name: Find latest saved news state
+        id: state-run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "news.yml",
+              status: "completed",
+              per_page: 50
+            });
+            for (const run of data.workflow_runs) {
+              if (run.id === context.runId) continue;
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.id
+              });
+              const state = artifacts.data.artifacts.find(item =>
+                item.name === "padma-news-state" && !item.expired
+              );
+              if (state) {
+                core.setOutput("run_id", String(run.id));
+                return;
+              }
+            }
+            core.setOutput("run_id", "");
+
+      - name: Restore previous queue and publication status
+        if: steps.state-run.outputs.run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: padma-news-state
+          path: data
+          run-id: ${{ steps.state-run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+
+      - name: Collect, verify, and process news
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_ACCESS_TOKEN: ${{ secrets.FACEBOOK_PAGE_ACCESS_TOKEN }}
+          NEWS_PUBLISHING_ENABLED: ${{ vars.NEWS_PUBLISHING_ENABLED || 'false' }}
+          PUBLISH_REQUESTED: ${{ inputs.publish || 'false' }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_ACTIONS: "true"
+        run: python scripts/pipeline.py
+
+      - name: Persist queue and publication state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: padma-news-state
+          path: data/news_queue.json
+          if-no-files-found: error
+          retention-days: 90
