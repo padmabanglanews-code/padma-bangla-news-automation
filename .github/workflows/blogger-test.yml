@@ -1,0 +1,64 @@
+name: Blogger Connection Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-blogger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test Blogger API
+        env:
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          import json
+          from google.oauth2.credentials import Credentials
+          from googleapiclient.discovery import build
+
+          names = [
+              "BLOGGER_BLOG_ID",
+              "BLOGGER_CLIENT_ID",
+              "BLOGGER_CLIENT_SECRET",
+              "BLOGGER_REFRESH_TOKEN",
+          ]
+
+          missing = [name for name in names if not os.getenv(name)]
+          if missing:
+              raise SystemExit("Missing GitHub Actions secrets: " + ", ".join(missing))
+
+          credentials = Credentials(
+              token=None,
+              refresh_token=os.environ["BLOGGER_REFRESH_TOKEN"],
+              token_uri="https://oauth2.googleapis.com/token",
+              client_id=os.environ["BLOGGER_CLIENT_ID"],
+              client_secret=os.environ["BLOGGER_CLIENT_SECRET"],
+              scopes=["https://www.googleapis.com/auth/blogger"],
+          )
+
+          service = build("blogger", "v3", credentials=credentials)
+          post = service.posts().insert(
+              blogId=os.environ["BLOGGER_BLOG_ID"],
+              body={
+                  "title": "PADMA BANGLA NEWS — Blogger Connection Test",
+                  "content": "<p>Blogger API connection test successful.</p>",
+              },
+              isDraft=True,
+          ).execute()
+
+          print(json.dumps({
+              "status": "success",
+              "draft": post.get("status"),
+              "post_id": post.get("id"),
+          }, indent=2))
+          PY
