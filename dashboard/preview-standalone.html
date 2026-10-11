@@ -1,0 +1,352 @@
+<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Padma Bangla News — AI Manager (DEMO)</title></head><body style="margin:0">
+<style>
+/* Padma Bangla News — AI Manager dashboard (prototype). সব নিয়ম #padma-dash-এর ভেতরে, যাতে Blogger থিমের সঙ্গে না মেশে। */
+#padma-dash{--navy:#0b1f4d;--royal:#1f4fd8;--red:#c8102e;--green:#1e8a4c;--ink:#162033;--muted:#5b6578;--line:#dfe4ee;--bg:#f3f5fa;--card:#fff;
+  font-family:"Noto Sans Bengali","Hind Siliguri","Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px;
+  max-width:960px;margin:0 auto;box-sizing:border-box;-webkit-text-size-adjust:100%}
+#padma-dash *{box-sizing:border-box}
+#padma-dash .pd-head{background:var(--navy);color:#fff;padding:14px 16px}
+#padma-dash .pd-head h1{margin:0;font-size:1.15rem;font-weight:700}
+#padma-dash .pd-head p{margin:2px 0 0;font-size:.82rem;opacity:.85}
+#padma-dash .pd-demo{background:var(--red);color:#fff;text-align:center;font-weight:700;font-size:.85rem;padding:8px 12px;position:sticky;top:0;z-index:5}
+#padma-dash .pd-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:34px;z-index:4;-webkit-overflow-scrolling:touch}
+#padma-dash .pd-tab{flex:0 0 auto;min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:22px;background:#fff;color:var(--navy);font:inherit;font-size:.92rem;cursor:pointer}
+#padma-dash .pd-tab[aria-selected="true"]{background:var(--royal);border-color:var(--royal);color:#fff;font-weight:700}
+#padma-dash .pd-main{padding:14px 12px 28px}
+#padma-dash h2{font-size:1.1rem;color:var(--navy);margin:4px 0 12px}
+#padma-dash h3{font-size:1rem;color:var(--navy);margin:0 0 8px}
+#padma-dash .pd-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+#padma-dash .pd-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+#padma-dash .pd-metric{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--royal);border-radius:12px;padding:12px}
+#padma-dash .pd-metric b{display:block;font-size:1.35rem;color:var(--navy);word-break:break-word}
+#padma-dash .pd-metric span{display:block;font-size:.85rem}
+#padma-dash .pd-metric small{display:block;color:var(--muted);font-size:.72rem;margin-top:4px}
+#padma-dash .pd-note{background:#fff7e0;border:1px solid #f0d98a;border-radius:10px;padding:10px 12px;font-size:.88rem;margin-bottom:12px}
+#padma-dash .pd-warn{background:#fdecee;border:1px solid #f2b6bf}
+#padma-dash .pd-badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600;background:#e8ecf5;color:var(--navy)}
+#padma-dash .pd-b-ok{background:#dff3e6;color:#14663a}
+#padma-dash .pd-b-bad{background:#fde0e4;color:#9c0c24}
+#padma-dash .pd-b-wait{background:#fff0cc;color:#7a5a00}
+#padma-dash .pd-b-info{background:#dfe8ff;color:#173a9e}
+#padma-dash .pd-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+#padma-dash .pd-meta{color:var(--muted);font-size:.84rem}
+#padma-dash .pd-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+#padma-dash .pd-chip{min-height:40px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:#fff;font:inherit;font-size:.86rem;cursor:pointer}
+#padma-dash .pd-chip[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+#padma-dash .pd-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--royal);background:var(--royal);color:#fff;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
+#padma-dash .pd-btn.sec{background:#fff;color:var(--royal)}
+#padma-dash .pd-btn[disabled]{background:#e6e9f1;border-color:#e6e9f1;color:#7b8498;cursor:not-allowed}
+#padma-dash label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}
+#padma-dash input[type=text],#padma-dash textarea{width:100%;min-height:44px;padding:9px 10px;border:1px solid #c5cddd;border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+#padma-dash textarea{min-height:88px;resize:vertical}
+#padma-dash .pd-count{font-size:.8rem;color:var(--green)}
+#padma-dash .pd-count.over{color:var(--red);font-weight:700}
+#padma-dash .pd-img{height:110px;border-radius:8px;background:repeating-linear-gradient(45deg,#e9edf6,#e9edf6 10px,#f4f6fb 10px,#f4f6fb 20px);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.85rem;margin-bottom:8px}
+#padma-dash details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fff}
+#padma-dash summary{cursor:pointer;min-height:32px;font-weight:600}
+#padma-dash ul{margin:6px 0 0;padding-left:20px}
+#padma-dash .pd-empty{text-align:center;color:var(--muted);padding:24px 8px}
+#padma-dash .pd-foot{text-align:center;color:var(--muted);font-size:.78rem;padding:8px 12px 18px}
+@media (min-width:700px){#padma-dash .pd-grid{grid-template-columns:repeat(4,1fr)}#padma-dash .pd-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+
+</style>
+<div id="padma-dash"></div>
+<script>
+/* DEMO DATA — সবই কাল্পনিক নমুনা। কোনো সত্যিকারের খবর, সূত্র বা সংখ্যা নয়।
+   এখানে কোনো API key, token বা secret নেই এবং রাখা উচিত নয়। */
+window.PADMA_DEMO = {
+  label: 'DEMO DATA',
+  updated: '২০২৬-১০-১১ ০৯:০০ IST (নমুনা)',
+  metrics: [
+    { label: 'আবিষ্কৃত খবর', en: 'Stories discovered', value: '124' },
+    { label: 'নির্বাচিত', en: 'Stories selected', value: '18' },
+    { label: 'ডুপ্লিকেট বাদ', en: 'Duplicates skipped', value: '41' },
+    { label: 'প্রতিবেদন তৈরি', en: 'Articles generated', value: '12' },
+    { label: 'Blogger ড্রাফট', en: 'Drafts created', value: '9' },
+    { label: 'ব্যর্থ কাজ', en: 'Failed jobs', value: '3' },
+    { label: 'শেষ সফল রান', en: 'Last successful run', value: '১১ অক্টো, ০৭:৩০' },
+    { label: 'পরবর্তী রান', en: 'Next scheduled run', value: 'নির্ধারিত নয় (শিডিউল বন্ধ)' }
+  ],
+  queue: [
+    { id: 'Q-001', title: 'কলকাতায় ভারী বৃষ্টির পূর্বাভাস, নিচু এলাকায় জলজমের আশঙ্কা', source: 'নমুনা সূত্র ১', category: 'স্থানীয়', geo: 'পশ্চিমবঙ্গ', status: 'selected', score: 152, verification: 'একটি সূত্র', time: '০৮:১০' },
+    { id: 'Q-002', title: 'উচ্চমাধ্যমিক পরীক্ষার নতুন সময়সূচি প্রকাশ', source: 'নমুনা সূত্র ২', category: 'শিক্ষা', geo: 'পশ্চিমবঙ্গ', status: 'draft', score: 148, verification: 'একাধিক সূত্রে অনুরূপ খবর', time: '০৭:৪৫' },
+    { id: 'Q-003', title: 'রাজ্যে শিক্ষক নিয়োগ প্রক্রিয়া নিয়ে নতুন নির্দেশ', source: 'নমুনা সূত্র ১', category: 'চাকরি', geo: 'পশ্চিমবঙ্গ', status: 'needs_review', score: 141, verification: 'যাচাই বাকি', time: '০৭:২০' },
+    { id: 'Q-004', title: 'শেয়ার বাজারে সামান্য উত্থান, সেনসেক্স-নিফটি স্থিতিশীল', source: 'নমুনা সূত্র ৩', category: 'ব্যবসা', geo: 'ভারত', status: 'queued', score: 96, verification: 'একটি সূত্র', time: '০৬:৫০' },
+    { id: 'Q-005', title: 'কলকাতায় ভারী বৃষ্টির আশঙ্কা, সতর্কতা জারি', source: 'নমুনা সূত্র ৪', category: 'স্থানীয়', geo: 'পশ্চিমবঙ্গ', status: 'duplicate', score: 140, verification: 'Q-001-এর সদৃশ', time: '০৬:৩০' },
+    { id: 'Q-006', title: 'আন্তর্জাতিক সম্মেলনে জলবায়ু প্রতিশ্রুতি নিয়ে আলোচনা', source: 'নমুনা সূত্র ৫', category: 'আন্তর্জাতিক', geo: 'আন্তর্জাতিক', status: 'queued', score: 70, verification: 'একটি সূত্র', time: '০৫:৫৫' },
+    { id: 'Q-007', title: 'জেলা হাসপাতালে নতুন চিকিৎসা পরিষেবা চালু', source: 'নমুনা সূত্র ২', category: 'স্বাস্থ্য', geo: 'পশ্চিমবঙ্গ', status: 'failed', score: 130, verification: 'নেই', time: '০৫:১০' }
+  ],
+  writer: {
+    storyId: 'Q-001',
+    sourceNote: 'নমুনা সূত্র ১ — https://example.com/demo-1 (কাল্পনিক URL)',
+    headline: 'কলকাতায় ভারী বৃষ্টির পূর্বাভাস, নিচু এলাকায় জলজমের আশঙ্কা',
+    summary: 'আবহাওয়া দপ্তরের বরাতে জানা গেছে, আগামী দু’দিন কলকাতা ও আশপাশে ভারী বৃষ্টির সম্ভাবনা রয়েছে।',
+    paragraphs: [
+      'সূত্রের খবর অনুযায়ী, আগামী দু’দিন কলকাতা ও লাগোয়া এলাকায় ভারী বৃষ্টির পূর্বাভাস দেওয়া হয়েছে। (নমুনা অনুচ্ছেদ)',
+      'নিচু এলাকায় জল জমার আশঙ্কার কথা বলা হয়েছে। প্রশাসনের পক্ষ থেকে কোনো আনুষ্ঠানিক বিবৃতির উল্লেখ মূল প্রতিবেদনে নেই। (নমুনা অনুচ্ছেদ)'
+    ],
+    verification: 'single_source',
+    reviewNotes: 'শুধু একটি সূত্র। বৃষ্টির পরিমাণ ও তারিখ আবহাওয়া দপ্তরের মূল বিজ্ঞপ্তির সঙ্গে মিলিয়ে নিন। (নমুনা)'
+  },
+  seo: {
+    title: 'কলকাতায় ভারী বৃষ্টির পূর্বাভাস: জলজমের আশঙ্কা',
+    description: 'আগামী দু’দিন কলকাতা ও আশপাশে ভারী বৃষ্টির সম্ভাবনা। নিচু এলাকায় জলজমের আশঙ্কা নিয়ে সর্বশেষ তথ্য।',
+    slug: 'kolkata-heavy-rain-forecast',
+    labels: 'স্থানীয়, আবহাওয়া, কলকাতা',
+    mainKeyword: 'কলকাতা বৃষ্টি',
+    related: 'জলজমে, আবহাওয়ার পূর্বাভাস, পশ্চিমবঙ্গ'
+  },
+  images: [
+    { id: 'I-01', story: 'Q-001', status: 'valid', source: 'নমুনা সূত্র ১ (এমবেডেড/RSS)', rights: 'ব্যবহারের অনুমতি যাচাই বাকি', check: 'HTTP 200 • image/jpeg • ১৮০ KB', alt: 'কলকাতার রাস্তায় বৃষ্টির দৃশ্য (নমুনা বিবরণ)' },
+    { id: 'I-02', story: 'Q-002', status: 'valid', source: 'নমুনা সূত্র ২', rights: 'ব্যবহারের অনুমতি যাচাই বাকি', check: 'HTTP 200 • image/png • ৯০ KB', alt: 'পরীক্ষার্থীদের নমুনা ছবি' },
+    { id: 'I-03', story: 'Q-003', status: 'awaiting', source: '—', rights: '—', check: 'উপযুক্ত ছবি পাওয়া যায়নি; কিছু বানানো হয়নি', alt: '' },
+    { id: 'I-04', story: 'Q-007', status: 'failed', source: 'নমুনা সূত্র ২', rights: '—', check: 'ব্যর্থ: কনটেন্ট-টাইপ text/html (ছবি নয়)', alt: '' }
+  ],
+  feeds: [
+    { name: 'নমুনা ফিড — পশ্চিমবঙ্গ ১', url: 'https://example.com/feed-wb-1.xml', region: 'পশ্চিমবঙ্গ', enabled: true, last: 'ঠিক আছে • ২০টি আইটেম', checked: '০৮:০০' },
+    { name: 'নমুনা ফিড — পশ্চিমবঙ্গ ২', url: 'https://example.com/feed-wb-2.xml', region: 'পশ্চিমবঙ্গ', enabled: true, last: 'ঠিক আছে • ১৫টি আইটেম', checked: '০৮:০০' },
+    { name: 'নমুনা ফিড — ভারত', url: 'https://example.com/feed-in.xml', region: 'ভারত', enabled: true, last: 'ঠিক আছে • ৩০টি আইটেম', checked: '০৮:০০' },
+    { name: 'নমুনা ফিড — আন্তর্জাতিক', url: 'https://example.com/feed-world.xml', region: 'আন্তর্জাতিক', enabled: true, last: 'ধীর সাড়া • ১২টি আইটেম', checked: '০৮:০১' },
+    { name: 'নমুনা ফিড — বন্ধ', url: 'https://example.com/feed-off.xml', region: 'ভারত', enabled: false, last: 'বন্ধ রাখা', checked: '—' },
+    { name: 'নমুনা ফিড — ভুল', url: 'https://example.com/feed-broken.xml', region: 'পশ্চিমবঙ্গ', enabled: true, last: 'ত্রুটি: অবৈধ XML', checked: '০৮:০১' }
+  ],
+  runs: [
+    { id: 'RUN-0005', mode: 'dry-run', start: '১১ অক্টো ০৭:৩০', end: '০৭:৩২', collected: 38, dups: 12, generated: 0, drafts: 0, status: 'ok' },
+    { id: 'RUN-0004', mode: 'draft', start: '১০ অক্টো ১৯:৩০', end: '১৯:৩৪', collected: 41, dups: 15, generated: 3, drafts: 3, status: 'ok' },
+    { id: 'RUN-0003', mode: 'draft', start: '১০ অক্টো ১৩:৩০', end: '১৩:৩১', collected: 35, dups: 9, generated: 1, drafts: 0, status: 'failed' },
+    { id: 'RUN-0002', mode: 'dry-run', start: '১০ অক্টো ০৮:০০', end: '০৮:০২', collected: 30, dups: 5, generated: 0, drafts: 0, status: 'ok' }
+  ],
+  errors: [
+    { cat: 'রান ব্যর্থ', code: 'quota_exhausted', msg: 'কনফিগার করা মডেলের কোটা শেষ (নমুনা)', count: 1, fix: ['OpenRouter ড্যাশবোর্ডে কোটা/ব্যালান্স দেখুন।', 'অন্য ফ্রি মডেল বেছে GitHub secret/variable OPENROUTER_MODEL বদলান — কোড বদলাতে হবে না।', 'সিস্টেম নিজে থেকে পেইড মডেলে যাবে না।'] },
+    { cat: 'অবৈধ RSS', code: 'invalid_rss', msg: 'ফিড XML পার্স করা যায়নি (নমুনা)', count: 1, fix: ['ব্রাউজারে ফিড URL খুলে দেখুন।', 'সঠিক URL বসান বা ফিডটি বন্ধ রাখুন।'] },
+    { cat: 'Blogger অনুমতি', code: 'blogger_auth', msg: 'অনুমতি/টোকেন অবৈধ (নমুনা)', count: 1, fix: ['Blogger OAuth আবার অনুমোদন করুন।', 'নতুন secret শুধু GitHub Actions Secrets-এ বসান — চ্যাটে বা ব্লগে নয়।', 'ঠিক না হওয়া পর্যন্ত ড্রাফট তৈরি বন্ধ থাকবে।'] },
+    { cat: 'API কী', code: 'invalid_api_key', msg: 'OpenRouter কী প্রত্যাখ্যাত (নমুনা)', count: 0, fix: ['OPENROUTER_API_KEY secret-টি নতুন কী দিয়ে বদলান।'] },
+    { cat: 'GitHub Actions', code: 'actions_failure', msg: 'workflow শুরুতেই থেমেছে (নমুনা)', count: 0, fix: ['Actions → রানটি খুলে লাল ধাপের লগ দেখুন।', 'লগে কোনো secret থাকার কথা নয়; থাকলে সঙ্গে সঙ্গে সেটি বদলান।'] }
+  ],
+  actionsUrl: 'https://github.com/padmabanglanews-code/padma-bangla-news-automation/actions'
+};
+
+</script>
+<script>
+/* Padma Bangla News — AI Manager dashboard (prototype v0.1)
+   শুধু DEMO DATA দেখায়। কোনো নেটওয়ার্ক কল নেই, কোনো secret নেই, কিছু সংরক্ষণও হয় না। */
+(function () {
+  'use strict';
+  var D = window.PADMA_DEMO;
+  var root = document.getElementById('padma-dash');
+  if (!root) { return; }
+  if (!D) { root.textContent = 'Data unavailable (demo-data.js লোড হয়নি)'; return; }
+
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        var v = attrs[k];
+        if (k === 'class') { e.className = v; }
+        else if (k === 'text') { e.textContent = v; }
+        else if (k.indexOf('on') === 0) { e.addEventListener(k.slice(2), v); }
+        else { e.setAttribute(k, v); }
+      });
+    }
+    (kids || []).forEach(function (c) {
+      if (c === null || c === undefined) { return; }
+      e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+  function badge(text, cls) { return h('span', { class: 'pd-badge ' + (cls || ''), text: text }); }
+
+  var STATUS = {
+    queued: ['সারিতে', 'pd-b-info'], selected: ['নির্বাচিত', 'pd-b-ok'], draft: ['ড্রাফট তৈরি', 'pd-b-ok'],
+    needs_review: ['পর্যালোচনা দরকার', 'pd-b-wait'], duplicate: ['ডুপ্লিকেট', ''], failed: ['ব্যর্থ', 'pd-b-bad']
+  };
+  var IMG = { valid: ['বৈধ', 'pd-b-ok'], awaiting: ['ছবির অপেক্ষায়', 'pd-b-wait'], failed: ['ব্যর্থ', 'pd-b-bad'] };
+
+  function demoNote(text) { return h('div', { class: 'pd-note', text: 'DEMO DATA — ' + text }); }
+
+  /* ---------- Overview ---------- */
+  function overview() {
+    var grid = h('div', { class: 'pd-grid' }, D.metrics.map(function (m) {
+      return h('div', { class: 'pd-metric' }, [
+        h('b', { text: m.value }), h('span', { text: m.label + ' / ' + m.en }),
+        h('small', { text: 'সূত্র: DEMO DATA • হালনাগাদ: ' + D.updated })
+      ]);
+    }));
+    return h('div', null, [
+      h('h2', { text: 'Overview — সারসংক্ষেপ' }),
+      h('div', { class: 'pd-note pd-warn', text: 'লাইভ ডেটা সংযুক্ত নয়। নিচের সব সংখ্যা নমুনা। সত্যিকারের ডেটা এলে এখানে "Data unavailable"-এর বদলে আসল সংখ্যা ও সূত্র দেখাবে।' }),
+      grid,
+      h('div', { class: 'pd-card', style: 'margin-top:12px' }, [
+        h('h3', { text: 'লাইভ স্ট্যাটাস' }),
+        h('div', { class: 'pd-row' }, [badge('Data unavailable', 'pd-b-bad'), h('span', { class: 'pd-meta', text: 'ব্যাকএন্ড এখনো তৈরি হয়নি।' })])
+      ]),
+      h('div', { class: 'pd-card' }, [
+        h('h3', { text: 'কাজ চালানো' }),
+        h('p', { class: 'pd-meta', text: 'নিরাপত্তার কারণে এই পাতা থেকে workflow চালানো বা সেটিংস বদলানো যায় না (ব্রাউজারে GitHub টোকেন রাখা নিরাপদ নয়)। নতুন Manager workflow এখনো যোগ হয়নি; নিচের লিংকটি শুধু GitHub Actions পাতা খোলে।' }),
+        h('a', { class: 'pd-btn sec', href: D.actionsUrl, target: '_blank', rel: 'noopener noreferrer', text: 'GitHub Actions খুলুন ↗' })
+      ])
+    ]);
+  }
+
+  /* ---------- News Queue ---------- */
+  var qFilter = 'all';
+  function queue() {
+    var wrap = h('div');
+    var chips = h('div', { class: 'pd-chips' });
+    var list = h('div');
+    var opts = [['all', 'সব']].concat(Object.keys(STATUS).map(function (k) { return [k, STATUS[k][0]]; }));
+    function draw() {
+      chips.textContent = '';
+      opts.forEach(function (o) {
+        chips.appendChild(h('button', { class: 'pd-chip', type: 'button', 'aria-pressed': String(qFilter === o[0]), text: o[1], onclick: function () { qFilter = o[0]; draw(); } }));
+      });
+      list.textContent = '';
+      var items = D.queue.filter(function (q) { return qFilter === 'all' || q.status === qFilter; });
+      if (!items.length) { list.appendChild(h('div', { class: 'pd-empty', text: 'এই ফিল্টারে কোনো খবর নেই।' })); return; }
+      items.forEach(function (q) {
+        var s = STATUS[q.status];
+        list.appendChild(h('div', { class: 'pd-card' }, [
+          h('div', { class: 'pd-row' }, [badge(s[0], s[1]), badge(q.geo), badge(q.category), h('span', { class: 'pd-meta', text: q.id + ' • স্কোর ' + q.score })]),
+          h('strong', { text: q.title }),
+          h('div', { class: 'pd-meta', text: q.source + ' • ' + q.time + ' • যাচাই: ' + q.verification })
+        ]));
+      });
+    }
+    draw();
+    wrap.appendChild(h('h2', { text: 'News Queue — খবরের সারি' }));
+    wrap.appendChild(demoNote('শিরোনাম ও সূত্র কাল্পনিক। র‍্যাঙ্কিং স্কোর শুধু অগ্রাধিকারের ইঙ্গিত, তথ্য-যাচাই নয়।'));
+    wrap.appendChild(chips); wrap.appendChild(list);
+    return wrap;
+  }
+
+  /* ---------- AI Writer ---------- */
+  function writer() {
+    var w = D.writer;
+    return h('div', null, [
+      h('h2', { text: 'AI Writer — বাংলা প্রতিবেদন' }),
+      demoNote('নিচের লেখাটি নমুনা, কোনো AI-এর আসল আউটপুট নয়।'),
+      h('div', { class: 'pd-card' }, [
+        h('h3', { text: 'উৎস (' + w.storyId + ')' }), h('p', { class: 'pd-meta', text: w.sourceNote }),
+        h('div', { class: 'pd-row' }, [badge('যাচাই: ' + w.verification, 'pd-b-wait'), badge('মানুষের পর্যালোচনা বাধ্যতামূলক', 'pd-b-bad'), badge('শুধু ড্রাফট', 'pd-b-ok')])
+      ]),
+      h('div', { class: 'pd-card' }, [
+        h('h3', { text: w.headline }), h('p', { class: 'pd-meta', text: w.summary })
+      ].concat(w.paragraphs.map(function (p) { return h('p', { text: p }); }))),
+      h('div', { class: 'pd-card' }, [h('h3', { text: 'পর্যালোচনা-নোট' }), h('p', { text: w.reviewNotes })]),
+      h('button', { class: 'pd-btn', type: 'button', disabled: 'disabled', text: 'Generate — ব্যাকএন্ড সংযুক্ত নয়' }),
+      h('p', { class: 'pd-meta', text: 'প্রকাশের কোনো বোতাম বা কোড এই সিস্টেমে থাকবে না। সব লেখা Blogger ড্রাফটেই যাবে।' })
+    ]);
+  }
+
+  /* ---------- SEO ---------- */
+  function seo() {
+    var s = D.seo;
+    function field(label, key, limit, multi) {
+      var input = multi ? h('textarea', { 'aria-label': label }) : h('input', { type: 'text', 'aria-label': label });
+      input.value = s[key];
+      var cnt = h('div', { class: 'pd-count' });
+      function upd() {
+        var n = input.value.length;
+        if (limit) { cnt.textContent = n + ' / ' + limit + ' অক্ষর'; cnt.className = 'pd-count' + (n > limit ? ' over' : ''); }
+      }
+      input.addEventListener('input', upd); upd();
+      return h('div', null, [h('label', { text: label }), input, cnt]);
+    }
+    return h('div', null, [
+      h('h2', { text: 'SEO Manager' }),
+      demoNote('এখানের পরিবর্তন শুধু এই পাতায়, কিছুই সংরক্ষিত বা পাঠানো হয় না।'),
+      h('div', { class: 'pd-card' }, [
+        field('SEO শিরোনাম', 'title', 60, false),
+        field('সার্চ বিবরণ', 'description', 155, true),
+        field('URL slug (প্রস্তাব)', 'slug', 0, false),
+        field('লেবেল', 'labels', 0, false),
+        field('মূল কীওয়ার্ড', 'mainKeyword', 0, false),
+        field('সম্পর্কিত কীওয়ার্ড', 'related', 0, false)
+      ]),
+      h('p', { class: 'pd-meta', text: 'SEO স্কোর র‍্যাঙ্কিংয়ের নিশ্চয়তা দেয় না; তথ্যের সঠিকতা সবসময় আগে।' })
+    ]);
+  }
+
+  /* ---------- Images ---------- */
+  function images() {
+    return h('div', null, [
+      h('h2', { text: 'Image Manager — ছবি' }),
+      demoNote('এখানে কোনো সত্যিকারের ছবি লোড হয় না; ঘরগুলো শুধু জায়গা-চিহ্ন।')
+    ].concat(D.images.map(function (im) {
+      var st = IMG[im.status];
+      return h('div', { class: 'pd-card' }, [
+        h('div', { class: 'pd-img', text: 'ছবির জায়গা (নমুনা)' }),
+        h('div', { class: 'pd-row' }, [badge(st[0], st[1]), h('span', { class: 'pd-meta', text: im.id + ' • খবর ' + im.story })]),
+        h('div', { class: 'pd-meta', text: 'উৎস: ' + im.source }), h('div', { class: 'pd-meta', text: 'স্বত্ব: ' + im.rights }),
+        h('div', { class: 'pd-meta', text: 'যাচাই: ' + im.check }),
+        h('div', { text: im.alt ? 'Alt: ' + im.alt : 'Alt: — (ম্যানুয়াল ছবি বাছাই দরকার)' })
+      ]);
+    })));
+  }
+
+  /* ---------- RSS Feeds ---------- */
+  function feeds() {
+    return h('div', null, [
+      h('h2', { text: 'RSS Feeds' }),
+      demoNote('URL গুলো example.com-এর কাল্পনিক ঠিকানা। ফিড সম্পাদনা পরে কনফিগ ফাইলে (পুল রিকুয়েস্টে) হবে।')
+    ].concat(D.feeds.map(function (f) {
+      var bad = /ত্রুটি/.test(f.last);
+      return h('div', { class: 'pd-card' }, [
+        h('div', { class: 'pd-row' }, [badge(f.enabled ? 'চালু' : 'বন্ধ', f.enabled ? 'pd-b-ok' : ''), badge(f.region), badge(f.last, bad ? 'pd-b-bad' : 'pd-b-info')]),
+        h('strong', { text: f.name }), h('div', { class: 'pd-meta', text: f.url + ' • শেষ পরীক্ষা ' + f.checked })
+      ]);
+    })));
+  }
+
+  /* ---------- Run History ---------- */
+  function runs() {
+    return h('div', null, [h('h2', { text: 'Run History' }), demoNote('রান আইডি ও সংখ্যা নমুনা।')].concat(D.runs.map(function (r) {
+      return h('div', { class: 'pd-card' }, [
+        h('div', { class: 'pd-row' }, [badge(r.status === 'ok' ? 'সফল' : 'ব্যর্থ', r.status === 'ok' ? 'pd-b-ok' : 'pd-b-bad'), badge(r.mode), h('strong', { text: r.id })]),
+        h('div', { class: 'pd-meta', text: r.start + ' → ' + r.end }),
+        h('div', { text: 'সংগৃহীত ' + r.collected + ' • ডুপ্লিকেট ' + r.dups + ' • প্রতিবেদন ' + r.generated + ' • ড্রাফট ' + r.drafts })
+      ]);
+    })));
+  }
+
+  /* ---------- Errors ---------- */
+  function errors() {
+    return h('div', null, [h('h2', { text: 'Error Monitoring' }), demoNote('ত্রুটির বার্তা নমুনা। আসল লগে কোনো secret থাকবে না।')].concat(D.errors.map(function (e) {
+      return h('details', null, [
+        h('summary', { text: e.cat + ' (' + e.count + ') — ' + e.code }),
+        h('p', { class: 'pd-meta', text: e.msg }),
+        h('strong', { text: 'সমাধান:' }),
+        h('ul', null, e.fix.map(function (x) { return h('li', { text: x }); }))
+      ]);
+    })));
+  }
+
+  var SECTIONS = [
+    ['overview', 'Overview', overview], ['queue', 'News Queue', queue], ['writer', 'AI Writer', writer], ['seo', 'SEO', seo],
+    ['images', 'Images', images], ['feeds', 'RSS Feeds', feeds], ['runs', 'Run History', runs], ['errors', 'Errors', errors]
+  ];
+  var current = 'overview';
+  var tabs = h('div', { class: 'pd-tabs', role: 'tablist' });
+  var main = h('div', { class: 'pd-main' });
+
+  function show(id) {
+    current = id;
+    Array.prototype.forEach.call(tabs.children, function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-id') === id)); });
+    main.textContent = '';
+    SECTIONS.forEach(function (s) { if (s[0] === id) { main.appendChild(s[2]()); } });
+    window.scrollTo(0, 0);
+  }
+  SECTIONS.forEach(function (s) {
+    tabs.appendChild(h('button', { class: 'pd-tab', type: 'button', role: 'tab', 'data-id': s[0], text: s[1], onclick: function () { show(s[0]); } }));
+  });
+
+  root.textContent = '';
+  root.appendChild(h('div', { class: 'pd-demo', text: 'DEMO DATA — এটি নমুনা, লাইভ তথ্য নয়' }));
+  root.appendChild(h('div', { class: 'pd-head' }, [h('h1', { text: 'পদ্ম বাংলা নিউজ — AI Manager' }), h('p', { text: 'প্রোটোটাইপ v0.1 • শুধু দেখার জন্য • সব লেখা শুধু ড্রাফট' })]));
+  root.appendChild(tabs); root.appendChild(main);
+  root.appendChild(h('div', { class: 'pd-foot', text: 'কোনো API key/টোকেন এই পাতায় নেই। Secret শুধু GitHub Actions Secrets-এ থাকবে।' }));
+  show(current);
+})();
+
+</script>
+</body></html>
