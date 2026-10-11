@@ -37,3 +37,13 @@ Repository root থেকে চালান:
 - `manager/draft_pipeline.py` candidate খসড়া ফেরত দেয়। Blogger/Facebook integration বা publication করে না।
 - Mock tests-এ কোনও প্রকৃত API request করা হয় না।
 - AI-এর তৈরি লেখা প্রকাশের আগে সম্পাদকীয় যাচাই প্রয়োজন; verification notes রাখা হয়।
+
+## Stage E — Blogger Draft-only client
+
+- `manager/blogger_drafts.py` Blogger API v3-তে draft তৈরির client।
+- `isDraft=true` request URL-এ client নিজেই বাধ্যতামূলক করে; publish method নেই।
+- Environment variables: `BLOGGER_ACCESS_TOKEN`, `BLOGGER_BLOG_ID`।
+- Token chat বা source code-এ লিখবে না; secret store/local environment ব্যবহার করবে।
+- শুধু `create_blogger_draft()` স্পষ্টভাবে কল করলে Blogger-এ draft তৈরি হবে। এই ধাপে কোনও live Blogger request করা হয়নি।
+- Tests fake HTTP opener ব্যবহার করে; বাস্তব Blogger account-এ কিছু তৈরি করে না।
+- Blogger API-তে draft তৈরি করার জন্য OAuth access token দরকার; token নিজে থেকে এখানে তৈরি বা refresh করা হয় না।
