@@ -28,7 +28,7 @@ class BloggerDraftTests(unittest.TestCase):
             seen["url"] = request.full_url
             seen["method"] = request.get_method()
             seen["payload"] = json.loads(request.data.decode())
-            return FakeResponse(b'{"id":"123","title":"খসড়া"}')
+            return FakeResponse(json.dumps({"id":"123","title":"খসড়া"}, ensure_ascii=False).encode("utf-8"))
         result = create_blogger_draft({"title":"খসড়া","body":"লেখা"}, access_token="test-token", blog_id="456", opener=fake_opener)
         self.assertIn("isDraft=true", seen["url"])
         self.assertEqual(seen["method"], "POST")
@@ -40,7 +40,7 @@ class BloggerDraftTests(unittest.TestCase):
             create_blogger_draft({"title":"খসড়া","body":""}, access_token="x", blog_id="1")
 
     def test_bad_response_not_confirmed(self):
-        def fake_opener(request, timeout): return FakeResponse(b'{"title":"no id"}')
+        def fake_opener(request, timeout): return FakeResponse(json.dumps({"title":"no id"}, ensure_ascii=False).encode("utf-8"))
         with self.assertRaisesRegex(ValueError, "did not confirm"):
             create_blogger_draft({"title":"খসড়া","body":"লেখা"}, access_token="x", blog_id="1", opener=fake_opener)
 
