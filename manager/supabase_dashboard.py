@@ -1,7 +1,8 @@
 """Supabase-backed draft storage for the hosted dashboard.
 
 Only instantiate this adapter on the server. Keep SUPABASE_URL and
-SUPABASE_SERVICE_ROLE_KEY in the hosting provider's secret environment.
+SUPABASE_SECRET_KEY in the hosting provider's secret environment.
+SUPABASE_SERVICE_ROLE_KEY remains a backwards-compatible legacy fallback.
 This module does not create tables, call news APIs, or publish content.
 """
 import os
@@ -21,10 +22,15 @@ class SupabaseDashboardDraftStore:
     def __init__(self, *, client=None, table_name="dashboard_drafts"):
         if client is None:
             url = os.getenv("SUPABASE_URL", "").strip()
-            key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+            # Supabase's current sb_secret_* key is preferred; the old
+            # JWT-based service_role key remains supported during migration.
+            key = (
+                os.getenv("SUPABASE_SECRET_KEY", "").strip()
+                or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+            )
             if not url or not key:
                 raise RuntimeError(
-                    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required"
+                    "SUPABASE_URL and SUPABASE_SECRET_KEY are required"
                 )
             try:
                 from supabase import create_client
@@ -70,7 +76,6 @@ class SupabaseDashboardDraftStore:
         return self._row_to_draft(rows[0])
 
     def add_draft(self, draft, *, draft_id):
-        # Reuse existing structural validation and force unpublished/pending status.
         validator = DashboardDraftStore()
         item = validator.add_draft(draft, draft_id=str(draft_id))
         row = {
@@ -88,7 +93,6 @@ class SupabaseDashboardDraftStore:
     def review_draft(self, draft_id, *, decision, reviewer_note=""):
         current = self.get_draft(draft_id)
         validator = DashboardDraftStore([current])
-        # Keep the existing ID/status so approval rules match the local adapter.
         validated_id = str(current["id"])
         validator._drafts[validated_id]["review_status"] = current["review_status"]
         result = validator.review_draft(
