@@ -64,3 +64,13 @@ Repository root থেকে চালান:
 - এটি নির্দিষ্ট কাঠামো ও quality signal যাচাই করে; খবর সত্য কি না তা স্বাধীনভাবে প্রমাণ করে না। প্রকাশের আগে সম্পাদককে মূল সূত্রের সঙ্গে তথ্য মিলিয়ে নিতে হবে।
 - কোনও network/API call, Blogger access, Facebook post বা publishing নেই। সব output `published: false`।
 - নতুন tests শুধু offline unit tests; চালানোর কমান্ড: `python -m unittest discover -s manager_tests -v`।
+
+
+## Stage H — Dashboard draft service layer (offline)
+
+- `manager/dashboard_api.py` in-memory draft list/detail ও editorial approve/reject action-এর ভিত্তি।
+- এটি এখন HTTP server নয়; ভবিষ্যৎ authenticated dashboard adapter-এর জন্য service layer মাত্র।
+- Approve মানে শুধু `approved_for_manual_next_step`; এটি Blogger-এ পাঠায় না এবং publish করে না।
+- Quality check fail হলে approve প্রত্যাখ্যান হয়; প্রতিটি action-এর পরে `published=false` থাকে।
+- Draft store বর্তমানে memory-তে থাকে; process restart হলে data থাকে না। Production dashboard-এ যুক্ত করার আগে authentication, authorization, persistent storage, CSRF/rate limits এবং audit logging প্রয়োজন।
+- Tests offline; কোনও external API বা publishing নেই।
