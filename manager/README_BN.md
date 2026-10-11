@@ -28,3 +28,12 @@ Repository root থেকে চালান:
 - HTTPS বাধ্যতামূলক; localhost/private/non-public IP host প্রত্যাখ্যান করা হয় এবং redirect-এর চূড়ান্ত URL পুনরায় যাচাই হয়।
 - পুরোনো `scripts/`, `tests/`, `data/news_queue.json` এবং scheduled workflow অপরিবর্তিত।
 - এই ধাপে OpenRouter বা Blogger Draft integration নেই।
+
+## Stage D — OpenRouter draft candidate
+
+- `manager/openrouter_client.py` OpenRouter Chat Completions-এ কেবল স্পষ্টভাবে কল করলে অনুরোধ পাঠায়।
+- প্রয়োজনীয় environment variable: `OPENROUTER_API_KEY` এবং `OPENROUTER_MODEL`।
+- API key chat, source code বা repository file-এ লিখবে না; GitHub Actions Secret বা স্থানীয় environment variable ব্যবহার করবে।
+- `manager/draft_pipeline.py` candidate খসড়া ফেরত দেয়। Blogger/Facebook integration বা publication করে না।
+- Mock tests-এ কোনও প্রকৃত API request করা হয় না।
+- AI-এর তৈরি লেখা প্রকাশের আগে সম্পাদকীয় যাচাই প্রয়োজন; verification notes রাখা হয়।
