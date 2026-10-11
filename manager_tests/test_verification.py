@@ -51,6 +51,13 @@ class DraftVerificationTests(unittest.TestCase):
         self.assertFalse(report["passed"])
         self.assertIn("bengali_script_missing", report["errors"])
 
+    def test_untranslated_english_words_fail_bengali_draft(self):
+        draft = self.good_draft()
+        draft["body"] += " affected people repeatedly চেষ্টা করছেন."
+        report = verify_draft(draft)
+        self.assertFalse(report["passed"])
+        self.assertIn("untranslated_english_in_bengali_draft", report["errors"])
+
     def test_missing_verification_notes_warns(self):
         draft = self.good_draft()
         del draft["verification_notes"]
