@@ -142,3 +142,10 @@ Repository root থেকে চালান:
 - এটি কেবল dashboard metrics ও draft cards দেখায়; কোনও Run, Approve, Blogger বা Publish action নেই।
 - এটি এখনও backend-এর সঙ্গে deployed/live connected নয়। কাজ করতে UI ও API-কে একই origin-এ নিরাপদভাবে host/reverse-proxy করতে হবে; GitHub repository file viewer বা GitHub Pages থেকে local loopback API-তে সরাসরি সংযোগ ধরে নেওয়া যাবে না।
 - API token কোনও screenshot বা chat-এ পাঠাবে না। Live use-এর আগে secure hosting/auth configuration দরকার।
+
+
+## Stage L5 — Dashboard adapter static safety tests
+
+- `manager_tests/test_dashboard_adapter_static.py` HTML asset references এবং JavaScript-এর read-only request pattern পরীক্ষা করে।
+- Test-গুলো নিশ্চিত করে adapter `GET /api/dashboard` ব্যবহার করে, browser storage বা `innerHTML` ব্যবহার করে না এবং Publish/Run/Approve endpoint উল্লেখ করে না।
+- এগুলো static/offline checks; browser-এ UI render হয়েছে বা বাস্তব API connection কাজ করেছে—এমন প্রমাণ নয়।
