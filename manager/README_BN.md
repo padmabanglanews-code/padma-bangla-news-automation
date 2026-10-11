@@ -104,3 +104,13 @@ Repository root থেকে চালান:
 - Blogger-এ পাঠানোর আগে QC pass আবশ্যক। QC fail হলে Blogger call বাদ যায়।
 - এই pipeline-এ কোনও publish function নেই; সব ফলাফলে `published=false`।
 - নতুন tests mock RSS, AI এবং Blogger creator ব্যবহার করে; GitHub Actions-এ চালানোর আগে ফলাফল যাচাই করতে হবে। বাস্তব service credentials বা live calls এখানে পরীক্ষা করা হয়নি।
+
+
+## Stage L1 — Persistent Dashboard Draft Store
+
+- `manager/persistent_dashboard.py` আলাদা JSON ফাইলে Dashboard draft ও review status atomicভাবে সংরক্ষণ করে; নতুন store instance তৈরি করলেও draft থাকে।
+- ডিফল্ট ফাইল `manager/data/dashboard_drafts.json`; এটি পুরোনো `data/news_queue.json` বা manager history ফাইল স্পর্শ করে না।
+- JSON ফাইল corrupt/ভুল schema হলে store overwrite না করে error দেয়।
+- Quality check fail হলে approve করা যায় না; approve শুধু editorial status, Blogger call বা publish নয়।
+- এটি এখনও local Python service adapter: HTTP server, dashboard UI connection, authentication বা multi-process locking নেই। তাই এটিকে public internet-এ সরাসরি প্রকাশ করা যাবে না।
+- Tests temporary directory ও mock data ব্যবহার করে; live service call নেই।
