@@ -114,3 +114,12 @@ Repository root থেকে চালান:
 - Quality check fail হলে approve করা যায় না; approve শুধু editorial status, Blogger call বা publish নয়।
 - এটি এখনও local Python service adapter: HTTP server, dashboard UI connection, authentication বা multi-process locking নেই। তাই এটিকে public internet-এ সরাসরি প্রকাশ করা যাবে না।
 - Tests temporary directory ও mock data ব্যবহার করে; live service call নেই।
+
+
+## Stage L2 — Dashboard cycle service facade
+
+- `manager/dashboard_service.py` একবারের Dashboard cycle চালানোর facade: নির্বাচিত pipeline চালায়, AI candidate আলাদা persistent store-এ সংরক্ষণ করে এবং read-only snapshot ফেরত দেয়।
+- Default mode `integration-safe-idle`; RSS/AI/Blogger live effect চালু হয় না। Live কাজের জন্য সংশ্লিষ্ট explicit flags দিতে হয়।
+- Stable SHA-256 ID একই source URL ও title-এর candidate পুনরায় এলে duplicate আটকাতে সাহায্য করে।
+- এই ধাপে কোনও scheduler, HTTP endpoint, login/authentication বা live dashboard connection তৈরি হয়নি। তাই এখনই public web app হিসেবে expose করা যাবে না।
+- Tests mock RSS/AI এবং temporary storage ব্যবহার করে। Workflow Success না দেখা পর্যন্ত এই ধাপের tests-কে সফল বলা যাবে না।
