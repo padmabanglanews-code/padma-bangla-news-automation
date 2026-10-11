@@ -55,3 +55,12 @@ Repository root থেকে চালান:
 - Blogger client ইচ্ছাকৃতভাবে orchestration-এর মধ্যে যুক্ত নয়; `blogger_contacted=false`, `blogger_draft_created=false`, `published=false` থাকে।
 - বাস্তব feed fetch বা OpenRouter call কেবল caller স্পষ্টভাবে dependency হিসেবে না দিলে নয়; তবে default AI generator real client, তাই production API চালানোর আগে mock generator ব্যবহার করো।
 - এই ধাপে live end-to-end execution করা হয়নি।
+
+
+## Stage G — News Verification & Quality Control
+
+- `manager/verification.py` draft-এর title, body, summary, source URL এবং placeholder/AI meta-text-এর মতো নির্দিষ্ট quality signal পরীক্ষা করে।
+- Batch রিপোর্টে প্রতিটি candidate-এর `passed`, `errors`, `warnings` এবং `factual_accuracy_verified=false` থাকে।
+- এটি নির্দিষ্ট কাঠামো ও quality signal যাচাই করে; খবর সত্য কি না তা স্বাধীনভাবে প্রমাণ করে না। প্রকাশের আগে সম্পাদককে মূল সূত্রের সঙ্গে তথ্য মিলিয়ে নিতে হবে।
+- কোনও network/API call, Blogger access, Facebook post বা publishing নেই। সব output `published: false`।
+- নতুন tests শুধু offline unit tests; চালানোর কমান্ড: `python -m unittest discover -s manager_tests -v`।
