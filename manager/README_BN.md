@@ -94,3 +94,13 @@ Repository root থেকে চালান:
 - এটি বিদ্যমান `dashboard/index.html` ও `dashboard/app.js` বদলায়নি; পুরোনো prototype অক্ষত।
 - মোবাইল ব্রাউজারে preview দেখতে GitHub repository-তে `dashboard/manager-preview.html` খুলে Raw নয়, Pages/server preview দরকার; সরাসরি repository file viewer-এ JavaScript app নাও চলতে পারে।
 - এটি Live Dashboard Connection নয়। পরবর্তী ধাপে secure hosting, authentication ও persistent backend প্রয়োজন।
+
+
+## Stage K — Integrated pipeline (explicit opt-in)
+
+- `manager/integrated_pipeline.py` RSS → AI draft candidate → editorial quality check → optional Blogger Draft flow একত্রিত করে।
+- Default call কোনও live RSS, OpenRouter বা Blogger request করে না; `integration-safe-idle` ফল দেয়।
+- Live চালাতে caller-কে স্পষ্টভাবে `live_rss=True` দিতে হবে; AI-এর জন্য `generate_ai=True`; Blogger Draft তৈরির জন্য অতিরিক্তভাবে `create_blogger_drafts=True` দিতে হবে।
+- Blogger-এ পাঠানোর আগে QC pass আবশ্যক। QC fail হলে Blogger call বাদ যায়।
+- এই pipeline-এ কোনও publish function নেই; সব ফলাফলে `published=false`।
+- নতুন tests mock RSS, AI এবং Blogger creator ব্যবহার করে; GitHub Actions-এ চালানোর আগে ফলাফল যাচাই করতে হবে। বাস্তব service credentials বা live calls এখানে পরীক্ষা করা হয়নি।
