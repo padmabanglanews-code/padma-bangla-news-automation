@@ -133,3 +133,12 @@ Repository root থেকে চালান:
 - Server চালানোর helper `serve_local_dashboard()`; default bind `127.0.0.1:8765` এবং non-loopback bind প্রত্যাখ্যান করে।
 - এটি স্থানীয় পরীক্ষার জন্য। Public internet-এ expose করা যাবে না; production-এর জন্য HTTPS, proper authentication/authorization, rate limiting, CSRF strategy এবং deployment hardening দরকার।
 - Tests offline WSGI calls ব্যবহার করে; server start বা external API call করে না।
+
+
+## Stage L4 — Read-only Dashboard UI adapter
+
+- `dashboard/manager-live-adapter.html` ও `dashboard/manager-live-adapter.js` একই-origin `GET /api/dashboard` endpoint-এর read-only UI adapter।
+- Token password input-এ নেওয়া হয় এবং শুধু page memory-তে থাকে; localStorage, URL বা source code-এ লেখা হয় না। Disconnect করলে field ও token মুছে যায়।
+- এটি কেবল dashboard metrics ও draft cards দেখায়; কোনও Run, Approve, Blogger বা Publish action নেই।
+- এটি এখনও backend-এর সঙ্গে deployed/live connected নয়। কাজ করতে UI ও API-কে একই origin-এ নিরাপদভাবে host/reverse-proxy করতে হবে; GitHub repository file viewer বা GitHub Pages থেকে local loopback API-তে সরাসরি সংযোগ ধরে নেওয়া যাবে না।
+- API token কোনও screenshot বা chat-এ পাঠাবে না। Live use-এর আগে secure hosting/auth configuration দরকার।
