@@ -51,6 +51,16 @@ def verify_draft(draft):
     if not re.search(r"[\u0980-\u09FF]", title + " " + body):
         errors.append("bengali_script_missing")
 
+    # Catch common untranslated English words in Bengali copy. This is a
+    # conservative guard, not a full language detector; editorial review remains required.
+    english_intrusions = re.findall(
+        r"\\b(?:affected|repeatedly|government|people|chief minister|breaking news|"
+        r"the|and|with|from|said|according to|has been|have been|will be)\\b",
+        (title + " " + body + " " + summary).casefold(),
+    )
+    if len(english_intrusions) >= 2:
+        errors.append("untranslated_english_in_bengali_draft")
+
     placeholders = (
         "lorem ipsum",
         "as an ai language model",
