@@ -36,6 +36,21 @@ class DraftVerificationTests(unittest.TestCase):
         draft["body"] += " lorem ipsum"
         self.assertIn("placeholder_or_ai_meta_text", verify_draft(draft)["errors"])
 
+    def test_devanagari_mixed_into_bengali_draft_fails(self):
+        draft = self.good_draft()
+        draft["body"] += " प्रधानमंत्री"
+        report = verify_draft(draft)
+        self.assertFalse(report["passed"])
+        self.assertIn("non_bengali_devanagari_script", report["errors"])
+
+    def test_non_bengali_body_fails(self):
+        draft = self.good_draft()
+        draft["title"] = "Breaking News Update"
+        draft["body"] = "This is an English-only body with enough length. " * 4
+        report = verify_draft(draft)
+        self.assertFalse(report["passed"])
+        self.assertIn("bengali_script_missing", report["errors"])
+
     def test_missing_verification_notes_warns(self):
         draft = self.good_draft()
         del draft["verification_notes"]
