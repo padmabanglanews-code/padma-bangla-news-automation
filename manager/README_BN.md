@@ -123,3 +123,13 @@ Repository root থেকে চালান:
 - Stable SHA-256 ID একই source URL ও title-এর candidate পুনরায় এলে duplicate আটকাতে সাহায্য করে।
 - এই ধাপে কোনও scheduler, HTTP endpoint, login/authentication বা live dashboard connection তৈরি হয়নি। তাই এখনই public web app হিসেবে expose করা যাবে না।
 - Tests mock RSS/AI এবং temporary storage ব্যবহার করে। Workflow Success না দেখা পর্যন্ত এই ধাপের tests-কে সফল বলা যাবে না।
+
+
+## Stage L3 — Authenticated read-only HTTP API
+
+- `manager/dashboard_http.py` loopback-only read-only API দেয়: `GET /api/dashboard`, `GET /api/drafts`, `GET /health`।
+- `PADMA_DASHBOARD_TOKEN` configure না থাকলে API বন্ধ থাকে; প্রতিটি request-এ `Authorization: Bearer <token>` দরকার।
+- API শুধু GET গ্রহণ করে; POST/PUT/DELETE ও অজানা route প্রত্যাখ্যান করে। কোনও RSS/AI/Blogger cycle trigger, approval বা publishing endpoint নেই।
+- Server চালানোর helper `serve_local_dashboard()`; default bind `127.0.0.1:8765` এবং non-loopback bind প্রত্যাখ্যান করে।
+- এটি স্থানীয় পরীক্ষার জন্য। Public internet-এ expose করা যাবে না; production-এর জন্য HTTPS, proper authentication/authorization, rate limiting, CSRF strategy এবং deployment hardening দরকার।
+- Tests offline WSGI calls ব্যবহার করে; server start বা external API call করে না।
