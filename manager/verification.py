@@ -36,11 +36,18 @@ def verify_draft(draft):
         except ValueError:
             errors.append("invalid_source_url")
 
-    normalized_title = re.sub(r"[^\\w\\u0980-\\u09FF]+", "", title.casefold())
-    normalized_body = re.sub(r"[^\\w\\u0980-\\u09FF]+", "", body.casefold())
+    normalized_title = re.sub(r"[^\w\u0980-\u09FF]+", "", title.casefold())
+    normalized_body = re.sub(r"[^\w\u0980-\u09FF]+", "", body.casefold())
     if normalized_title and normalized_title in normalized_body:
         warnings.append("title_repeated_in_body")
-    if re.search(r"(?i)\\b(lorem ipsum|as an ai language model|insert headline|placeholder text)\\b", title + " " + body):
+    searchable_text = (title + " " + body).casefold()
+    placeholders = (
+        "lorem ipsum",
+        "as an ai language model",
+        "insert headline",
+        "placeholder text",
+    )
+    if any(phrase in searchable_text for phrase in placeholders):
         errors.append("placeholder_or_ai_meta_text")
     if not draft.get("verification_notes"):
         warnings.append("human_fact_check_required")
