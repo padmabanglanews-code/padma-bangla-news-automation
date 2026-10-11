@@ -149,3 +149,13 @@ Repository root থেকে চালান:
 - `manager_tests/test_dashboard_adapter_static.py` HTML asset references এবং JavaScript-এর read-only request pattern পরীক্ষা করে।
 - Test-গুলো নিশ্চিত করে adapter `GET /api/dashboard` ব্যবহার করে, browser storage বা `innerHTML` ব্যবহার করে না এবং Publish/Run/Approve endpoint উল্লেখ করে না।
 - এগুলো static/offline checks; browser-এ UI render হয়েছে বা বাস্তব API connection কাজ করেছে—এমন প্রমাণ নয়।
+
+
+## Stage L7 — Local dashboard runner
+
+- `manager/run_dashboard.py` local read-only dashboard চালানোর CLI entry point।
+- চালানোর আগে environment-এ অন্তত ২৪ অক্ষরের `PADMA_DASHBOARD_TOKEN` সেট করতে হবে; token source code বা GitHub file-এ রাখবে না।
+- চালানোর কমান্ড: `python -m manager.run_dashboard`; ঐচ্ছিক port-এর জন্য `PADMA_DASHBOARD_PORT` ব্যবহার করা যায়।
+- Server শুধু `127.0.0.1`-এ bind করে; এটি public hosting নয় এবং অন্য ডিভাইস থেকে সরাসরি ব্যবহার করা যাবে না।
+- Android-এ GitHub Actions সফল হওয়া মানে তোমার ফোনে server চালু হয়েছে—এমন নয়। বাস্তব ব্যবহার করতে আলাদা host/deployment প্রয়োজন।
+- এই runner কোনও schedule, RSS collection, AI call, Blogger draft creation বা publishing চালু করে না।
