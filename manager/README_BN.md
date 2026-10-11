@@ -47,3 +47,11 @@ Repository root থেকে চালান:
 - শুধু `create_blogger_draft()` স্পষ্টভাবে কল করলে Blogger-এ draft তৈরি হবে। এই ধাপে কোনও live Blogger request করা হয়নি।
 - Tests fake HTTP opener ব্যবহার করে; বাস্তব Blogger account-এ কিছু তৈরি করে না।
 - Blogger API-তে draft তৈরি করার জন্য OAuth access token দরকার; token নিজে থেকে এখানে তৈরি বা refresh করা হয় না।
+
+## Stage F — End-to-end dry-run orchestration
+
+- `manager/end_to_end.py` RSS collect → dedupe/ranking → AI draft candidate একসঙ্গে চালানোর orchestrator।
+- Tests RSS ও AI-তে mock ব্যবহার করে; প্রকৃত network/API call হয় না।
+- Blogger client ইচ্ছাকৃতভাবে orchestration-এর মধ্যে যুক্ত নয়; `blogger_contacted=false`, `blogger_draft_created=false`, `published=false` থাকে।
+- বাস্তব feed fetch বা OpenRouter call কেবল caller স্পষ্টভাবে dependency হিসেবে না দিলে নয়; তবে default AI generator real client, তাই production API চালানোর আগে mock generator ব্যবহার করো।
+- এই ধাপে live end-to-end execution করা হয়নি।
