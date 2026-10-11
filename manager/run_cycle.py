@@ -26,7 +26,7 @@ def main():
     if create_blogger_drafts and not generate_ai:
         raise SystemExit("Refusing run: Blogger drafts require PADMA_RUN_OPENROUTER=true")
 
-    if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
+    if os.getenv("SUPABASE_URL") and (os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")):
         store = SupabaseDashboardDraftStore()
     else:
         store = PersistentDashboardDraftStore(
