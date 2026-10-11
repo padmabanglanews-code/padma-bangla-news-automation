@@ -1,20 +1,30 @@
 # Padma Bangla News Manager — ধাপ C
 
-এই অংশে RSS/Atom XML parser-এর পাশাপাশি একটি opt-in HTTPS RSS fetcher যোগ করা হয়েছে।
+এই ধাপে curated RSS উৎসের তালিকা এবং opt-in live RSS collection যুক্ত হয়েছে।
+
+## নির্বাচিত RSS উৎস
+উৎসের URL এবং enable/disable অবস্থা `manager/feed_sources.json`-এ রাখা হয়েছে:
+- The Hindu — Kolkata
+- Live Hindustan — West Bengal
+- ABP News — India ও States
+- Press Information Bureau — Press Releases
+- The Hindu — International
+
+এই উৎসগুলোর ঠিকানা প্রকাশ্য RSS তালিকা থেকে নেওয়া হয়েছে; এই পরিবর্তনে বাস্তবে feed fetch করে availability যাচাই করা হয়নি।
+
+## কীভাবে কাজ করে
+- `manager/live_rss.py`-এর `fetch_feed_xml()` HTTPS feed সংগ্রহ করে; timeout ১০ সেকেন্ড ও সর্বোচ্চ ১ MB।
+- `manager/live_pipeline.py`-এর `collect_live_rss()` শুধু সরাসরি কল করলে enabled feed fetch করে, তারপর বিদ্যমান parser/dedupe/ranking চালায়।
+- Feed ব্যর্থ হলে অন্য feed চেষ্টা করা হয় এবং error ফলাফলে রাখা হয়।
+- ফলাফল সবসময় dry-run; `published: false`। Blogger, OpenRouter বা Facebook-এ কোনও কল নেই।
+- এই collection existing scheduled workflow থেকে কল করা হয় না; স্বয়ংক্রিয় polling চালু হয়নি।
 
 ## পরীক্ষা
 Repository root থেকে চালান:
 `python -m unittest discover -s manager_tests -v`
-
-## RSS fetcher-এর নিরাপত্তা
-- `manager/live_rss.py`-এর `fetch_feed_xml()` কেবল সরাসরি কল করলে নেটওয়ার্কে যায়।
-- HTTPS বাধ্যতামূলক; localhost/private/non-public IP host প্রত্যাখ্যান করা হয়।
-- Redirect-এর চূড়ান্ত URL-ও পুনরায় যাচাই হয়।
-- ডিফল্ট timeout ১০ সেকেন্ড, response limit ১ MB।
-- ফাইলটি বর্তমান pipeline বা scheduled workflow থেকে কল করা হয় না।
-- এই ধাপে RSS URL-এর curated তালিকা, স্বয়ংক্রিয় polling, OpenRouter, Blogger API বা publishing যুক্ত হয়নি।
+নতুন live-pipeline tests mock fetcher ব্যবহার করে; বাস্তব feed URL-এ সংযোগ করে না।
 
 ## নিরাপত্তা ও পুরোনো সিস্টেম
+- HTTPS বাধ্যতামূলক; localhost/private/non-public IP host প্রত্যাখ্যান করা হয় এবং redirect-এর চূড়ান্ত URL পুনরায় যাচাই হয়।
 - পুরোনো `scripts/`, `tests/`, `data/news_queue.json` এবং scheduled workflow অপরিবর্তিত।
-- Manager pipeline এখনও dry-run; Blogger-এ কোনও draft বা post তৈরি করে না।
-- নতুন fetcher-এর পরীক্ষা network request mock করে; প্রকৃত RSS feed-এ সংযোগ করে না।
+- এই ধাপে OpenRouter বা Blogger Draft integration নেই।
