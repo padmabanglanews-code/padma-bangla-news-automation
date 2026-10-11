@@ -44,7 +44,7 @@ class OpenRouterTests(unittest.TestCase):
     def test_rejects_bad_model_json(self):
         def fake_opener(request, timeout):
             return FakeResponse(json.dumps({"choices":[{"message":{"content":"not json"}}]}).encode())
-        with self.assertRaisesRegex(ValueError, "unexpected response"):
+        with self.assertRaisesRegex(ValueError, "JSON object"):
             generate_bengali_draft(self.story, api_key="x", model="test/model", opener=fake_opener)
 
 
