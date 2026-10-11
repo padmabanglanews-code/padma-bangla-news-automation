@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: padma-bangla-news-dashboard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT manager.render_app:app
+    envVars:
+      - key: PADMA_DASHBOARD_TOKEN
+        sync: false
