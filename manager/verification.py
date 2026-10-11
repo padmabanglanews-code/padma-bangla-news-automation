@@ -45,10 +45,10 @@ def verify_draft(draft):
     # Bengali news drafts must not silently mix Devanagari or other scripts.
     # Allow Latin characters for names/acronyms/URLs, but reject Devanagari
     # and common non-Bengali Indic scripts as a conservative editorial gate.
-    devanagari = re.compile(r"[\\u0900-\\u097F]")
+    devanagari = re.compile(r"[\u0900-\u097F]")
     if devanagari.search(title + " " + body + " " + summary):
         errors.append("non_bengali_devanagari_script")
-    if not re.search(r"[\\u0980-\\u09FF]", title + " " + body):
+    if not re.search(r"[\u0980-\u09FF]", title + " " + body):
         errors.append("bengali_script_missing")
 
     placeholders = (
