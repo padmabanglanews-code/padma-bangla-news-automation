@@ -1,5 +1,7 @@
 """Dashboard orchestration facade. No scheduler or HTTP server is started here."""
-import hashlib\n\nfrom .integrated_pipeline import run_integrated_pipeline
+import hashlib
+
+from .integrated_pipeline import run_integrated_pipeline
 from .persistent_dashboard import PersistentDashboardDraftStore
 from .dashboard_readonly import build_dashboard_snapshot
 
@@ -26,9 +28,10 @@ def run_dashboard_cycle(*, live_rss=False, generate_ai=False, create_blogger_dra
     )
     draft_store = store or PersistentDashboardDraftStore()
     saved_ids = []
-    for index, candidate in enumerate(pipeline.get("ai_draft_candidates", [])):
+    for candidate in pipeline.get("ai_draft_candidates", []):
         source_url = str(candidate.get("source_url", candidate.get("link", "")) or "")
-        stable_key = (source_url + "\\n" + str(candidate.get("title", ""))).encode("utf-8")\n        draft_id = "news-" + hashlib.sha256(stable_key).hexdigest()[:24]
+        stable_key = (source_url + "\n" + str(candidate.get("title", ""))).encode("utf-8")
+        draft_id = "news-" + hashlib.sha256(stable_key).hexdigest()[:24]
         try:
             draft_store.add_draft(candidate, draft_id=draft_id)
             saved_ids.append(draft_id)
