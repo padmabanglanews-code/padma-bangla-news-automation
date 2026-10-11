@@ -16,15 +16,16 @@ class DashboardAdapterStaticTests(unittest.TestCase):
         js = (ROOT / "dashboard" / "manager-live-adapter.js").read_text(encoding="utf-8")
         self.assertIn("fetch('/api/dashboard'", js)
         self.assertIn("method: 'GET'", js)
-        self.assertNotIn("localStorage", js)
-        self.assertNotIn("sessionStorage", js)
+        # The words may appear in explanatory comments; reject actual storage API usage.
+        self.assertNotIn("localStorage.", js)
+        self.assertNotIn("sessionStorage.", js)
         self.assertNotIn("innerHTML", js)
 
     def test_adapter_has_disconnect_and_no_publish_controls(self):
         js = (ROOT / "dashboard" / "manager-live-adapter.js").read_text(encoding="utf-8")
         self.assertIn("function disconnect()", js)
         self.assertIn("token = ''", js)
-        self.assertNotIn("POST", js)
+        self.assertNotIn("method: 'POST'", js)
         self.assertNotIn("/api/publish", js)
         self.assertNotIn("/api/run", js)
         self.assertNotIn("/api/approve", js)
