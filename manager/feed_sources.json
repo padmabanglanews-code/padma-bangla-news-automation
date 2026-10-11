@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "description": "Curated public HTTPS RSS sources. Collection is opt-in and manual; feeds are not polled automatically.",
+  "feeds": [
+    {
+      "id": "the-hindu-kolkata",
+      "name": "The Hindu — Kolkata",
+      "url": "https://www.thehindu.com/news/cities/kolkata/feeder/default.rss",
+      "region": "west_bengal",
+      "category": "local",
+      "enabled": true
+    },
+    {
+      "id": "livehindustan-west-bengal",
+      "name": "Live Hindustan — West Bengal",
+      "url": "https://api.livehindustan.com/feeds/rss/west-bengal/rssfeed.xml",
+      "region": "west_bengal",
+      "category": "local",
+      "enabled": true
+    },
+    {
+      "id": "abp-india",
+      "name": "ABP News — India",
+      "url": "https://www.abplive.com/news/india/feed",
+      "region": "india",
+      "category": "national",
+      "enabled": true
+    },
+    {
+      "id": "abp-states",
+      "name": "ABP News — States",
+      "url": "https://www.abplive.com/states/feed",
+      "region": "india",
+      "category": "national",
+      "enabled": true
+    },
+    {
+      "id": "pib-press-releases",
+      "name": "Press Information Bureau — India",
+      "url": "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1",
+      "region": "india",
+      "category": "government",
+      "enabled": true
+    },
+    {
+      "id": "the-hindu-world",
+      "name": "The Hindu — International",
+      "url": "https://www.thehindu.com/news/international/feeder/default.rss",
+      "region": "international",
+      "category": "world",
+      "enabled": true
+    }
+  ]
+}
