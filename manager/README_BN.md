@@ -74,3 +74,13 @@ Repository root থেকে চালান:
 - Quality check fail হলে approve প্রত্যাখ্যান হয়; প্রতিটি action-এর পরে `published=false` থাকে।
 - Draft store বর্তমানে memory-তে থাকে; process restart হলে data থাকে না। Production dashboard-এ যুক্ত করার আগে authentication, authorization, persistent storage, CSRF/rate limits এবং audit logging প্রয়োজন।
 - Tests offline; কোনও external API বা publishing নেই।
+
+
+## Stage I — Read-only Dashboard snapshot
+
+- `manager/dashboard_readonly.py` সরবরাহ করা draft list থেকে JSON-serializable read-only snapshot তৈরি করে।
+- Dashboard-এ draft title, summary, source URL, review status, quality pass/fail, errors/warnings ও pipeline status দেখানোর জন্য data shape দেয়।
+- এটি নিজে কোনও HTTP server চালায় না, storage থেকে নিজে data load করে না, external API কল করে না।
+- Input-এর `published` flag উপেক্ষা করে output-এ সবসময় `published=false` রাখে; কোনও approval বা publishing action নেই।
+- Tests offline; কোনও Blogger, OpenRouter বা Facebook request নেই।
+- Live dashboard connection-এর আগে authenticated hosting, access control, persistent store ও UI integration আলাদাভাবে তৈরি/পরীক্ষা করতে হবে।
