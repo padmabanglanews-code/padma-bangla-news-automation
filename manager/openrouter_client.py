@@ -1,10 +1,40 @@
 """OpenRouter chat-completions client. No call occurs until explicitly invoked."""
 import json
 import os
+import re
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def _extract_json_object(content):
+    """Accept plain JSON, fenced JSON, or text blocks returned by chat APIs."""
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        content = "\n".join(parts)
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("OpenRouter response did not contain text content")
+    text = content.strip()
+    text = re.sub(r"^\s*```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*```\s*$", "", text)
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        # Some models add a short preamble around an otherwise valid JSON object.
+        start, end = text.find("{"), text.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError("OpenRouter response did not contain a JSON object")
+        try:
+            value = json.loads(text[start:end + 1])
+        except json.JSONDecodeError as exc:
+            raise ValueError("OpenRouter response contained invalid JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError("OpenRouter response JSON was not an object")
+    return value
 
 
 def generate_bengali_draft(story: dict, *, api_key=None, model=None, timeout=30, opener=urlopen) -> dict:
@@ -69,11 +99,23 @@ def generate_bengali_draft(story: dict, *, api_key=None, model=None, timeout=30,
         raise ValueError("OpenRouter response exceeded size limit")
     try:
         response_data = json.loads(raw.decode("utf-8"))
-        content = response_data["choices"][0]["message"]["content"]
-        draft = json.loads(content)
-    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
-        raise ValueError("OpenRouter returned an unexpected response format") from exc
-    if not isinstance(draft, dict) or not all(isinstance(draft.get(k), str) for k in ("title", "body", "summary")):
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("OpenRouter returned invalid response JSON") from exc
+    if not isinstance(response_data, dict):
+        raise ValueError("OpenRouter response was not a JSON object")
+    if isinstance(response_data.get("error"), dict):
+        error = response_data["error"]
+        code = str(error.get("code", "unknown"))
+        # Do not include arbitrary provider error text in logs; it may contain sensitive data.
+        raise ValueError(f"OpenRouter API returned an error (code {code})")
+    try:
+        choices = response_data["choices"]
+        message = choices[0]["message"]
+        content = message.get("content")
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ValueError("OpenRouter response is missing choices/message content") from exc
+    draft = _extract_json_object(content)
+    if not all(isinstance(draft.get(k), str) for k in ("title", "body", "summary")):
         raise ValueError("Draft JSON must contain string title, body, and summary")
     notes = draft.get("verification_notes", [])
     if not isinstance(notes, list) or any(not isinstance(note, str) for note in notes):
