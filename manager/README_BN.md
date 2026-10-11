@@ -84,3 +84,13 @@ Repository root থেকে চালান:
 - Input-এর `published` flag উপেক্ষা করে output-এ সবসময় `published=false` রাখে; কোনও approval বা publishing action নেই।
 - Tests offline; কোনও Blogger, OpenRouter বা Facebook request নেই।
 - Live dashboard connection-এর আগে authenticated hosting, access control, persistent store ও UI integration আলাদাভাবে তৈরি/পরীক্ষা করতে হবে।
+
+
+## Stage J — Dashboard UI mock integration
+
+- `dashboard/manager-preview.html` ও `dashboard/manager-preview.js` একটি আলাদা mock-only draft review screen।
+- এটি Stage I snapshot-এর মতো data shape দেখায়: draft title/summary/source, quality status/errors/warnings এবং review status।
+- ইচ্ছাকৃতভাবে approve/publish action নেই; কোনও network request, browser storage বা backend call নেই।
+- এটি বিদ্যমান `dashboard/index.html` ও `dashboard/app.js` বদলায়নি; পুরোনো prototype অক্ষত।
+- মোবাইল ব্রাউজারে preview দেখতে GitHub repository-তে `dashboard/manager-preview.html` খুলে Raw নয়, Pages/server preview দরকার; সরাসরি repository file viewer-এ JavaScript app নাও চলতে পারে।
+- এটি Live Dashboard Connection নয়। পরবর্তী ধাপে secure hosting, authentication ও persistent backend প্রয়োজন।
