@@ -1,15 +1,22 @@
-"""Authenticated read-only HTTP adapter for local dashboard preview.
+"""Read-only local dashboard server with a same-origin UI and authenticated API.
 
-Binds to loopback only. No run/approve/publish/write endpoints are exposed.
-For production, use a proper authenticated deployment and HTTPS reverse proxy.
+Loopback only; no scheduler, RSS run, AI call, Blogger call, approval, or publishing.
 """
 import hmac
 import json
 import os
-from wsgiref.simple_server import make_server, WSGIServer
+from pathlib import Path
+from wsgiref.simple_server import make_server
 
 from .dashboard_readonly import build_dashboard_snapshot
 from .persistent_dashboard import PersistentDashboardDraftStore
+
+ROOT = Path(__file__).resolve().parents[1]
+DASHBOARD_DIR = ROOT / "dashboard"
+STATIC_ASSETS = {
+    "/manager-live-adapter.js": ("manager-live-adapter.js", "application/javascript; charset=utf-8"),
+    "/style.css": ("style.css", "text/css; charset=utf-8"),
+}
 
 
 class DashboardReadOnlyApp:
@@ -20,6 +27,28 @@ class DashboardReadOnlyApp:
     def __call__(self, environ, start_response):
         method = environ.get("REQUEST_METHOD", "GET").upper()
         path = environ.get("PATH_INFO", "/")
+        if method != "GET":
+            return self._respond(start_response, "405 Method Not Allowed",
+                                 {"error": "read_only_endpoint"})
+
+        # UI shell and fixed static assets are served from this same origin.
+        if path in {"/", "/manager-live-adapter.html"}:
+            try:
+                body = (DASHBOARD_DIR / "manager-live-adapter.html").read_bytes()
+            except OSError:
+                return self._respond(start_response, "500 Internal Server Error",
+                                     {"error": "dashboard_ui_unavailable"})
+            return self._respond_bytes(start_response, "200 OK", body,
+                                       "text/html; charset=utf-8")
+        if path in STATIC_ASSETS:
+            filename, content_type = STATIC_ASSETS[path]
+            try:
+                body = (DASHBOARD_DIR / filename).read_bytes()
+            except OSError:
+                return self._respond(start_response, "500 Internal Server Error",
+                                     {"error": "dashboard_asset_unavailable"})
+            return self._respond_bytes(start_response, "200 OK", body, content_type)
+
         supplied = environ.get("HTTP_AUTHORIZATION", "")
         expected = "Bearer " + self.token if self.token else ""
         if not self.token:
@@ -27,9 +56,6 @@ class DashboardReadOnlyApp:
                                  {"error": "dashboard_token_not_configured"})
         if not hmac.compare_digest(supplied, expected):
             return self._respond(start_response, "401 Unauthorized", {"error": "unauthorized"})
-        if method != "GET":
-            return self._respond(start_response, "405 Method Not Allowed",
-                                 {"error": "read_only_endpoint"})
         try:
             if path == "/api/drafts":
                 payload = {"drafts": self.store.list_drafts(), "published": False}
@@ -50,17 +76,24 @@ class DashboardReadOnlyApp:
     @staticmethod
     def _respond(start_response, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        return DashboardReadOnlyApp._respond_bytes(
+            start_response, status, body, "application/json; charset=utf-8"
+        )
+
+    @staticmethod
+    def _respond_bytes(start_response, status, body, content_type):
         start_response(status, [
-            ("Content-Type", "application/json; charset=utf-8"),
+            ("Content-Type", content_type),
             ("Content-Length", str(len(body))),
             ("Cache-Control", "no-store"),
             ("X-Content-Type-Options", "nosniff"),
+            ("Content-Security-Policy", "default-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"),
         ])
         return [body]
 
 
 def serve_local_dashboard(*, host="127.0.0.1", port=8765, token=None, store=None):
-    """Serve the read-only API on loopback. Refuses non-loopback bind addresses."""
+    """Serve UI + read-only API on loopback. Requires a token and refuses public bind."""
     if host not in {"127.0.0.1", "::1", "localhost"}:
         raise ValueError("dashboard_server_loopback_only")
     app = DashboardReadOnlyApp(token=token, store=store)
